@@ -26,7 +26,7 @@ values
     crypt('rebeccachencjy@gmail.com', gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"display_name":"User 1"}'::jsonb,
+    '{"display_name":"User 1","username":"user1"}'::jsonb,
     now(),
     now()
   ),
@@ -39,7 +39,7 @@ values
     crypt('mantoumiaoshen@gmail.com', gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"display_name":"User 2"}'::jsonb,
+    '{"display_name":"User 2","username":"user2"}'::jsonb,
     now(),
     now()
   )
@@ -86,13 +86,14 @@ set
   identity_data = excluded.identity_data,
   updated_at = now();
 
-insert into public.profiles (id, display_name, university, graduation_class)
+insert into public.profiles (id, display_name, username, university, graduation_class)
 values
-  ('11111111-1111-4111-8111-111111111111', 'User 1', 'Sample University', '2026'),
-  ('22222222-2222-4222-8222-222222222222', 'User 2', 'Sample University', '2026')
+  ('11111111-1111-4111-8111-111111111111', 'User 1', 'user1', 'Sample University', '2026'),
+  ('22222222-2222-4222-8222-222222222222', 'User 2', 'user2', 'Sample University', '2026')
 on conflict (id) do update
 set
   display_name = excluded.display_name,
+  username = excluded.username,
   university = excluded.university,
   graduation_class = excluded.graduation_class;
 

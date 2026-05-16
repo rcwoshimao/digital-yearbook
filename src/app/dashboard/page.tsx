@@ -34,6 +34,11 @@ type InviteRow = {
   invited_at: string;
 };
 
+type InviteProfileRow = {
+  id: string;
+  username: string;
+};
+
 type YearbookRow = {
   id: string;
   owner_id: string;
@@ -169,7 +174,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const receivedEntries = await Promise.all(
     (receivedRows ?? []).map(async (row) => mapEntryRow(row, await getSignedImageUrls(row.image_urls ?? []))),
   );
-  const invites = (inviteRows ?? []).map(mapInviteRow);
+  const invitedUserIds = Array.from(new Set((inviteRows ?? []).map((invite) => invite.invited_user_id)));
+  const { data: invitedProfiles } =
+    invitedUserIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, username")
+          .in("id", invitedUserIds)
+          .returns<InviteProfileRow[]>()
+      : { data: [] };
+  const invitedUsernamesById = new Map(
+    (invitedProfiles ?? []).map((profile) => [profile.id, profile.username]),
+  );
+  const invites = (inviteRows ?? []).map((row) => mapInviteRow(row, invitedUsernamesById));
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const ownerName = profile?.display_name ?? "you";
 
@@ -227,11 +244,12 @@ function mapEntryRow(row: EntryRow, signedImageUrls: string[]): YearbookEntry {
   };
 }
 
-function mapInviteRow(row: InviteRow): YearbookInvite {
+function mapInviteRow(row: InviteRow, invitedUsernamesById: Map<string, string>): YearbookInvite {
   return {
     id: row.id,
     yearbookId: row.yearbook_id,
     invitedUserId: row.invited_user_id,
+    invitedUsername: invitedUsernamesById.get(row.invited_user_id) ?? "unknown",
     invitedAt: new Date(row.invited_at),
   };
 }

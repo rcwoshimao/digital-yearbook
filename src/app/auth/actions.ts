@@ -9,6 +9,10 @@ function encodedMessage(type: "auth_error" | "auth_message", message: string) {
   return `/login?${params.toString()}`;
 }
 
+function normalizeUsername(value: string) {
+  return value.trim().replace(/^@+/, "").toLowerCase();
+}
+
 export async function signIn(formData: FormData) {
   if (!hasSupabaseEnv) {
     redirect(encodedMessage("auth_error", "Add Supabase environment variables before signing in."));
@@ -32,8 +36,19 @@ export async function signUp(formData: FormData) {
   }
 
   const displayName = String(formData.get("displayName") ?? "");
+  const username = normalizeUsername(String(formData.get("username") ?? ""));
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+
+  if (!/^[a-z0-9_]{3,30}$/.test(username)) {
+    redirect(
+      encodedMessage(
+        "auth_error",
+        "Choose a username with 3-30 lowercase letters, numbers, or underscores.",
+      ),
+    );
+  }
+
   const supabase = createClient();
   const { error } = await supabase.auth.signUp({
     email,
@@ -41,6 +56,7 @@ export async function signUp(formData: FormData) {
     options: {
       data: {
         display_name: displayName,
+        username,
       },
     },
   });

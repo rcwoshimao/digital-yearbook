@@ -71,6 +71,7 @@ export function AuthForm({ authError, authMessage, isConfigured }: AuthFormProps
             </p>
           </div>
           <AuthField label="Display name" name="displayName" type="text" />
+          <AuthField label="Username" name="username" placeholder="rebecca2026" type="text" />
           <AuthField label="University" name="university" type="text" />
           <AuthField label="Graduation class" name="graduationClass" placeholder="Class of 2026" type="text" />
           <AuthField label="Email" name="email" type="email" />

@@ -72,12 +72,12 @@ export function ShareControls({
       >
         <input name="yearbookId" type="hidden" value={yearbookId} />
         <label className="block text-sm font-semibold text-stone-700">
-          Invite by Username or User ID
+          Invite by Username
           <input
             className="mt-2 w-full rounded-full border border-stone-300 px-4 py-3 text-sm"
             disabled={isSampleMode}
-            name="invitedUserId"
-            placeholder="@username or Supabase user UUID"
+            name="username"
+            placeholder="@username"
           />
         </label>
         <button
@@ -86,9 +86,6 @@ export function ShareControls({
         >
           Invite
         </button>
-        <p className="mt-2 text-xs text-stone-500">
-          Username lookup will be wired when the profile search API is implemented.
-        </p>
       </form>
 
       {invites.length > 0 ? (
@@ -107,7 +104,7 @@ export function ShareControls({
             >
               <input name="yearbookId" type="hidden" value={yearbookId} />
               <input name="invitedUserId" type="hidden" value={invite.invitedUserId} />
-              <span className="truncate font-mono text-xs">{invite.invitedUserId}</span>
+              <span className="truncate text-sm font-semibold">@{invite.invitedUsername}</span>
               <button className="font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={isSampleMode}>
                 Revoke
               </button>

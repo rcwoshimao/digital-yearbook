@@ -5,6 +5,7 @@ export const sampleUsers = {
     id: "11111111-1111-4111-8111-111111111111",
     displayName: "User 1",
     email: "rebeccachencjy@gmail.com",
+    username: "user1",
     university: "Sample University",
     graduationClass: "2026",
   },
@@ -12,6 +13,7 @@ export const sampleUsers = {
     id: "22222222-2222-4222-8222-222222222222",
     displayName: "User 2",
     email: "mantoumiaoshen@gmail.com",
+    username: "user2",
     university: "Sample University",
     graduationClass: "2026",
   },
@@ -66,6 +68,7 @@ export const sampleInvites: YearbookInvite[] = [
     id: "99999999-1111-4111-8111-111111111111",
     yearbookId: sampleYearbooks.user1.id,
     invitedUserId: sampleUsers.user2.id,
+    invitedUsername: sampleUsers.user2.username,
     invitedAt: new Date("2026-05-15T15:00:00.000Z"),
   },
 ];

@@ -3,6 +3,7 @@ create extension if not exists pgcrypto;
 create table profiles (
   id uuid references auth.users(id) on delete cascade primary key,
   display_name text not null,
+  username text not null unique,
   university text,
   graduation_class text,
   avatar_url text,
@@ -152,6 +153,7 @@ set search_path = public
 as $$
 declare
   fallback_name text;
+  fallback_username text;
 begin
   fallback_name := coalesce(
     new.raw_user_meta_data ->> 'display_name',
@@ -159,11 +161,16 @@ begin
     split_part(new.email, '@', 1),
     'New Graduate'
   );
+  fallback_username := coalesce(
+    nullif(regexp_replace(lower(new.raw_user_meta_data ->> 'username'), '[^a-z0-9_]+', '_', 'g'), ''),
+    regexp_replace(lower(split_part(new.email, '@', 1)), '[^a-z0-9_]+', '_', 'g') || '_' || substr(new.id::text, 1, 8)
+  );
 
-  insert into public.profiles (id, display_name, avatar_url)
+  insert into public.profiles (id, display_name, username, avatar_url)
   values (
     new.id,
     fallback_name,
+    fallback_username,
     new.raw_user_meta_data ->> 'avatar_url'
   );
 

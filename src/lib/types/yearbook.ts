@@ -1,6 +1,7 @@
 export type Profile = {
   id: string;
   displayName: string;
+  username: string;
   university: string | null;
   graduationClass: string | null;
   avatarUrl: string | null;
@@ -31,5 +32,6 @@ export type YearbookInvite = {
   id: string;
   yearbookId: string;
   invitedUserId: string;
+  invitedUsername: string;
   invitedAt: Date;
 };
