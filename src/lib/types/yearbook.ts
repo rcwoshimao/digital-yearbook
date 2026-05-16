@@ -1,3 +1,5 @@
+import type { YearbookPageStyle } from "@/lib/yearbook/page-style";
+
 export type Profile = {
   id: string;
   displayName: string;
@@ -24,6 +26,7 @@ export type YearbookEntry = {
   authorClass: string | null;
   contentText: string;
   imageUrls: string[];
+  styleConfig: YearbookPageStyle;
   createdAt: Date;
   isVisibleToOwner: boolean;
 };

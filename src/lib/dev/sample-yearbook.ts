@@ -1,4 +1,5 @@
 import type { YearbookEntry, YearbookInvite } from "@/lib/types/yearbook";
+import type { YearbookPageStyle } from "@/lib/yearbook/page-style";
 
 export const sampleUsers = {
   user1: {
@@ -18,6 +19,37 @@ export const sampleUsers = {
     graduationClass: "2026",
   },
 } as const;
+
+const sampleStyles = {
+  blush: {
+    background_color: "#fdecea",
+    pattern: "dotted",
+    font: "handwritten",
+    ink_color: "#4a1a1a",
+    border: "corner",
+  },
+  mint: {
+    background_color: "#e8f5f0",
+    pattern: "grid",
+    font: "mono",
+    ink_color: "#1a3a2a",
+    border: "double",
+  },
+  sky: {
+    background_color: "#e8f0fd",
+    pattern: "lined",
+    font: "serif",
+    ink_color: "#1a2e4a",
+    border: "classic",
+  },
+  sunflower: {
+    background_color: "#fdf8e1",
+    pattern: "grid",
+    font: "serif",
+    ink_color: "#1a3a2a",
+    border: "corner",
+  },
+} satisfies Record<string, YearbookPageStyle>;
 
 export const sampleYearbooks = {
   user1: {
@@ -45,6 +77,7 @@ export const sampleEntries: YearbookEntry[] = [
     contentText:
       "Mantou, thanks for making senior year brighter. I hope your next chapter is full of good food, good friends, and ridiculous stories.",
     imageUrls: [],
+    styleConfig: sampleStyles.sky,
     createdAt: new Date("2026-05-15T16:00:00.000Z"),
     isVisibleToOwner: true,
   },
@@ -58,7 +91,92 @@ export const sampleEntries: YearbookEntry[] = [
     contentText:
       "Rebecca, you made every project feel possible. I am cheering for you always, class of 2026 forever!",
     imageUrls: [],
+    styleConfig: sampleStyles.blush,
     createdAt: new Date("2026-05-15T16:05:00.000Z"),
+    isVisibleToOwner: true,
+  },
+  {
+    id: "eeeeeeee-3333-4333-8333-333333333333",
+    yearbookId: sampleYearbooks.user1.id,
+    authorId: sampleUsers.user2.id,
+    authorName: "Mia Chen",
+    authorUniversity: "Sample University",
+    authorClass: "2026",
+    contentText:
+      "Rebecca, your late-night debugging playlists deserve their own campus legend. Thank you for making every deadline feel a little less scary.",
+    imageUrls: [],
+    styleConfig: sampleStyles.mint,
+    createdAt: new Date("2026-05-15T16:06:00.000Z"),
+    isVisibleToOwner: true,
+  },
+  {
+    id: "eeeeeeee-4444-4444-8444-444444444444",
+    yearbookId: sampleYearbooks.user1.id,
+    authorId: sampleUsers.user2.id,
+    authorName: "Jordan Lee",
+    authorUniversity: "Sample University",
+    authorClass: "2026",
+    contentText:
+      "I will never forget the way you turned our messy idea into a real demo. Keep building things that make people smile.",
+    imageUrls: [],
+    styleConfig: sampleStyles.sky,
+    createdAt: new Date("2026-05-15T16:07:00.000Z"),
+    isVisibleToOwner: true,
+  },
+  {
+    id: "eeeeeeee-5555-4555-8555-555555555555",
+    yearbookId: sampleYearbooks.user1.id,
+    authorId: sampleUsers.user2.id,
+    authorName: "Avery Patel",
+    authorUniversity: "Sample University",
+    authorClass: "2026",
+    contentText:
+      "From coffee runs to capstone chaos, you always brought calm energy. I hope post-grad life gives you the same kindness you gave everyone else.",
+    imageUrls: [],
+    styleConfig: sampleStyles.blush,
+    createdAt: new Date("2026-05-15T16:08:00.000Z"),
+    isVisibleToOwner: true,
+  },
+  {
+    id: "eeeeeeee-6666-4666-8666-666666666666",
+    yearbookId: sampleYearbooks.user1.id,
+    authorId: sampleUsers.user2.id,
+    authorName: "Sam Rivera",
+    authorUniversity: "Sample University",
+    authorClass: "2026",
+    contentText:
+      "You made study group feel like a team, not a panic room. Thank you for explaining the hard parts and laughing through the weird parts.",
+    imageUrls: [],
+    styleConfig: sampleStyles.sunflower,
+    createdAt: new Date("2026-05-15T16:09:00.000Z"),
+    isVisibleToOwner: true,
+  },
+  {
+    id: "eeeeeeee-7777-4777-8777-777777777777",
+    yearbookId: sampleYearbooks.user1.id,
+    authorId: sampleUsers.user2.id,
+    authorName: "Taylor Kim",
+    authorUniversity: "Sample University",
+    authorClass: "2026",
+    contentText:
+      "Your yearbook needs a page for all the tiny wins: fixed bugs, shared snacks, perfect timing, and somehow always finding a seat in the library.",
+    imageUrls: [],
+    styleConfig: sampleStyles.blush,
+    createdAt: new Date("2026-05-15T16:10:00.000Z"),
+    isVisibleToOwner: true,
+  },
+  {
+    id: "eeeeeeee-8888-4888-8888-888888888888",
+    yearbookId: sampleYearbooks.user1.id,
+    authorId: sampleUsers.user2.id,
+    authorName: "Noah Brooks",
+    authorUniversity: "Sample University",
+    authorClass: "2026",
+    contentText:
+      "You are the person everyone wanted on their project team: thoughtful, prepared, and secretly hilarious. Congratulations on everything.",
+    imageUrls: [],
+    styleConfig: sampleStyles.mint,
+    createdAt: new Date("2026-05-15T16:11:00.000Z"),
     isVisibleToOwner: true,
   },
 ];

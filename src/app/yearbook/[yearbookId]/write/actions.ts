@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeYearbookPageStyle } from "@/lib/yearbook/page-style";
 
 const MAX_IMAGES = 5;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -15,6 +16,8 @@ function writeUrl(yearbookId: string, type: "entry_error" | "entry_message", mes
 export async function createEntry(formData: FormData) {
   const yearbookId = String(formData.get("yearbookId") ?? "");
   const contentText = String(formData.get("contentText") ?? "").trim();
+  const styleConfigValue = String(formData.get("styleConfig") ?? "");
+  const styleConfig = normalizeYearbookPageStyle(parseStyleConfig(styleConfigValue));
   const imageFiles = formData
     .getAll("images")
     .filter((value): value is File => value instanceof File && value.size > 0);
@@ -97,6 +100,7 @@ export async function createEntry(formData: FormData) {
     author_class: profile.graduation_class,
     content_text: contentText,
     image_urls: uploadedPaths,
+    style_config: styleConfig,
   });
 
   if (error) {
@@ -108,4 +112,12 @@ export async function createEntry(formData: FormData) {
   }
 
   redirect(writeUrl(yearbookId, "entry_message", "Entry submitted. It is now locked."));
+}
+
+function parseStyleConfig(value: string) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }

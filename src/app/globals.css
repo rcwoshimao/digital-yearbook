@@ -20,3 +20,55 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+.yearbook-pattern-lined {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 27px,
+    rgba(0, 0, 0, 0.07) 28px
+  );
+}
+
+.yearbook-pattern-dotted {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.11) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+
+.yearbook-pattern-grid {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.yearbook-border-classic {
+  box-shadow: inset 0 0 0 12px rgba(255, 255, 255, 0.45), inset 0 0 0 14px rgba(0, 0, 0, 0.15);
+}
+
+.yearbook-border-double {
+  box-shadow:
+    inset 0 0 0 8px rgba(255, 255, 255, 0.45),
+    inset 0 0 0 9px rgba(0, 0, 0, 0.16),
+    inset 0 0 0 18px rgba(255, 255, 255, 0.25),
+    inset 0 0 0 19px rgba(0, 0, 0, 0.12);
+}
+
+.yearbook-border-corner {
+  background-image:
+    linear-gradient(currentColor, currentColor),
+    linear-gradient(currentColor, currentColor),
+    linear-gradient(currentColor, currentColor),
+    linear-gradient(currentColor, currentColor);
+  background-position:
+    18px 18px,
+    18px 18px,
+    calc(100% - 18px) calc(100% - 18px),
+    calc(100% - 18px) calc(100% - 18px);
+  background-repeat: no-repeat;
+  background-size:
+    52px 2px,
+    2px 52px,
+    52px 2px,
+    2px 52px;
+}

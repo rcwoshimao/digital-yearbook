@@ -5,6 +5,7 @@ import { sampleEntries, sampleUsers, sampleYearbooks } from "@/lib/dev/sample-ye
 import { hasSupabaseEnv, isSampleDataMode } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import type { YearbookEntry } from "@/lib/types/yearbook";
+import { normalizeYearbookPageStyle } from "@/lib/yearbook/page-style";
 
 type EntryRow = {
   id: string;
@@ -15,6 +16,7 @@ type EntryRow = {
   author_class: string | null;
   content_text: string | null;
   image_urls: string[] | null;
+  style_config: unknown;
   created_at: string;
   is_visible_to_owner: boolean | null;
 };
@@ -154,7 +156,7 @@ export default async function WriteHubPage() {
     supabase
       .from("entries")
       .select(
-        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, created_at, is_visible_to_owner",
+        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, style_config, created_at, is_visible_to_owner",
       )
       .eq("author_id", user.id)
       .order("created_at", { ascending: false })
@@ -266,6 +268,7 @@ function mapEntryRow(row: EntryRow): YearbookEntry {
     authorClass: row.author_class,
     contentText: row.content_text ?? "",
     imageUrls: row.image_urls ?? [],
+    styleConfig: normalizeYearbookPageStyle(row.style_config),
     createdAt: new Date(row.created_at),
     isVisibleToOwner: row.is_visible_to_owner ?? true,
   };

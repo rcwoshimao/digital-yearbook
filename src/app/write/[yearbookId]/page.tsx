@@ -225,7 +225,7 @@ type WritePageShellProps = {
 
 function WritePageShell({ children, recipientName, yearbookId }: WritePageShellProps) {
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-6 py-8">
+    <main className="mx-auto min-h-screen max-w-6xl px-6 py-8">
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link className="text-sm font-semibold text-yearbook-accent" href="/write">
           ← Back to Sign Yearbooks

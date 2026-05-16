@@ -1,4 +1,5 @@
 import type { YearbookEntry } from "@/lib/types/yearbook";
+import { defaultYearbookPageStyle } from "@/lib/yearbook/page-style";
 
 export const demoEntries: YearbookEntry[] = [
   {
@@ -11,6 +12,7 @@ export const demoEntries: YearbookEntry[] = [
     contentText:
       "Congratulations on graduating. I am so grateful for all the late-night study sessions and campus coffee runs.",
     imageUrls: [],
+    styleConfig: defaultYearbookPageStyle,
     createdAt: new Date("2026-05-15T12:00:00Z"),
     isVisibleToOwner: true,
   },
@@ -24,6 +26,7 @@ export const demoEntries: YearbookEntry[] = [
     contentText:
       "You made every group project better. Wishing you the best in the next chapter.",
     imageUrls: [],
+    styleConfig: defaultYearbookPageStyle,
     createdAt: new Date("2026-05-16T12:00:00Z"),
     isVisibleToOwner: true,
   },
