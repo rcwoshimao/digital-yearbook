@@ -5,7 +5,7 @@ dist
 .env*.local
 .env
 .env.*
-!.env.example
+.env.example
 .vercel
 .DS_Store
 npm-debug.log*
