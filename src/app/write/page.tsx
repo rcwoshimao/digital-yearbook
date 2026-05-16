@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { WriteHubSearch } from "@/components/forms/write-hub-search";
 import { WrittenEntryLog } from "@/components/yearbook/written-entry-log";
 import { sampleEntries, sampleUsers, sampleYearbooks } from "@/lib/dev/sample-yearbook";
 import { hasSupabaseEnv, isSampleDataMode } from "@/lib/supabase/env";
@@ -20,9 +19,37 @@ type EntryRow = {
   is_visible_to_owner: boolean | null;
 };
 
+type InviteRow = {
+  yearbook_id: string;
+};
+
+type YearbookAccessRow = {
+  id: string;
+  owner_id: string;
+};
+
+type ProfileRow = {
+  id: string;
+  display_name: string;
+};
+
+type WritableYearbookTarget = {
+  ownerName: string;
+  yearbookId: string;
+};
+
 export default async function WriteHubPage() {
   if (isSampleDataMode) {
     const authoredEntries = sampleEntries.filter((entry) => entry.authorId === sampleUsers.user1.id);
+    const writableTargets = [
+      {
+        ownerName: sampleUsers.user2.displayName,
+        yearbookId: sampleYearbooks.user2.id,
+      },
+    ];
+    const recipientNamesByYearbookId = {
+      [sampleYearbooks.user2.id]: sampleUsers.user2.displayName,
+    };
 
     return (
       <WriteHubShell>
@@ -35,20 +62,7 @@ export default async function WriteHubPage() {
             Sample mode is logged in as User 1. Open User 2&apos;s yearbook to view the sample
             entry User 1 already wrote.
           </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <Link
-              className="rounded-2xl bg-yearbook-ink px-5 py-4 text-sm font-semibold text-white"
-              href={`/write/${sampleYearbooks.user2.id}`}
-            >
-              Open User 2&apos;s yearbook
-            </Link>
-            <Link
-              className="rounded-2xl border border-stone-300 bg-white px-5 py-4 text-sm font-semibold text-stone-700"
-              href={`/write/${sampleYearbooks.user1.id}`}
-            >
-              Open User 1&apos;s yearbook
-            </Link>
-          </div>
+          <WritableYearbookList targets={writableTargets} />
         </section>
 
         <section className="rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
@@ -56,7 +70,10 @@ export default async function WriteHubPage() {
           <p className="mt-2 text-sm text-stone-600">
             This sample list shows the single entry User 1 wrote to User 2.
           </p>
-          <WrittenEntryLog entries={authoredEntries} />
+          <WrittenEntryLog
+            entries={authoredEntries}
+            recipientNamesByYearbookId={recipientNamesByYearbookId}
+          />
         </section>
       </WriteHubShell>
     );
@@ -79,16 +96,87 @@ export default async function WriteHubPage() {
     redirect("/login");
   }
 
-  const { data: authoredRows } = await supabase
-    .from("entries")
-    .select(
-      "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, created_at, is_visible_to_owner",
-    )
-    .eq("author_id", user.id)
-    .order("created_at", { ascending: false })
-    .returns<EntryRow[]>();
+  async function getWritableTargets(targetIds: string[], currentUserId: string) {
+    if (targetIds.length === 0) {
+      return {
+        recipientNamesByYearbookId: {},
+        writableTargets: [],
+      };
+    }
+
+    const { data: yearbookRows } = await supabase
+      .from("yearbooks")
+      .select("id, owner_id")
+      .in("id", targetIds)
+      .returns<YearbookAccessRow[]>();
+    const ownerIds = Array.from(new Set((yearbookRows ?? []).map((yearbook) => yearbook.owner_id)));
+    const { data: profileRows } =
+      ownerIds.length > 0
+        ? await supabase
+            .from("profiles")
+            .select("id, display_name")
+            .in("id", ownerIds)
+            .returns<ProfileRow[]>()
+        : { data: [] };
+
+    const namesByOwnerId = new Map(
+      (profileRows ?? []).map((profile) => [profile.id, profile.display_name]),
+    );
+    const yearbooksById = new Map((yearbookRows ?? []).map((yearbook) => [yearbook.id, yearbook]));
+    const recipientNamesByYearbookId = Object.fromEntries(
+      (yearbookRows ?? []).map((yearbook) => [
+        yearbook.id,
+        namesByOwnerId.get(yearbook.owner_id) ?? "this graduate",
+      ]),
+    );
+    const writableTargets = targetIds.flatMap((yearbookId) => {
+      const yearbook = yearbooksById.get(yearbookId);
+
+      if (!yearbook || yearbook.owner_id === currentUserId) {
+        return [];
+      }
+
+      return [
+        {
+          ownerName: namesByOwnerId.get(yearbook.owner_id) ?? "this graduate",
+          yearbookId,
+        },
+      ];
+    });
+
+    return {
+      recipientNamesByYearbookId,
+      writableTargets,
+    };
+  }
+
+  const [{ data: authoredRows }, { data: inviteRows }] = await Promise.all([
+    supabase
+      .from("entries")
+      .select(
+        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, created_at, is_visible_to_owner",
+      )
+      .eq("author_id", user.id)
+      .order("created_at", { ascending: false })
+      .returns<EntryRow[]>(),
+    supabase
+      .from("yearbook_invites")
+      .select("yearbook_id")
+      .eq("invited_user_id", user.id)
+      .returns<InviteRow[]>(),
+  ]);
 
   const authoredEntries = (authoredRows ?? []).map(mapEntryRow);
+  const targetYearbookIds = Array.from(
+    new Set([
+      ...(inviteRows ?? []).map((invite) => invite.yearbook_id),
+      ...(authoredRows ?? []).map((entry) => entry.yearbook_id),
+    ]),
+  );
+  const { writableTargets, recipientNamesByYearbookId } = await getWritableTargets(
+    targetYearbookIds,
+    user.id,
+  );
 
   return (
     <WriteHubShell>
@@ -98,20 +186,20 @@ export default async function WriteHubPage() {
         </p>
         <h1 className="mt-2 text-4xl font-black tracking-tight">Sign a Yearbook</h1>
         <p className="mt-3 text-stone-700">
-          Find someone by profile lookup later, or paste a share link now to open their write form.
+          Yearbooks you have been invited to or signed before appear here.
         </p>
-        <div className="mt-6">
-          <WriteHubSearch />
-        </div>
+        <WritableYearbookList targets={writableTargets} />
       </section>
 
       <section className="rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
         <h2 className="text-xl font-bold">Entries I&apos;ve Written</h2>
         <p className="mt-2 text-sm text-stone-600">
-          A private reference list so you can remember whose yearbooks you have signed. The note
-          content stays with the recipient.
+          A private reference list of the messages you have sent.
         </p>
-        <WrittenEntryLog entries={authoredEntries} />
+        <WrittenEntryLog
+          entries={authoredEntries}
+          recipientNamesByYearbookId={recipientNamesByYearbookId}
+        />
       </section>
     </WriteHubShell>
   );
@@ -140,6 +228,30 @@ function SetupCard() {
       <p className="mt-3 text-stone-700">
         Add Supabase environment variables before browsing or signing other yearbooks.
       </p>
+    </div>
+  );
+}
+
+function WritableYearbookList({ targets }: { targets: WritableYearbookTarget[] }) {
+  if (targets.length === 0) {
+    return (
+      <p className="mt-6 rounded-2xl border border-dashed border-stone-300 p-4 text-sm text-stone-600">
+        No invited or previously opened yearbooks yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-6 divide-y divide-stone-200 rounded-2xl border border-stone-200 bg-yearbook-paper">
+      {targets.map((target) => (
+        <Link
+          className="block p-4 text-sm font-semibold text-yearbook-ink transition hover:bg-white/70"
+          href={`/write/${target.yearbookId}`}
+          key={target.yearbookId}
+        >
+          Sign {target.ownerName}&apos;s yearbook →
+        </Link>
+      ))}
     </div>
   );
 }
