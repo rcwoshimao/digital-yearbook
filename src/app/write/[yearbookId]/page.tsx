@@ -2,7 +2,13 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { WriteEntryForm } from "@/components/forms/write-entry-form";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
+import {
+  getSampleRecipient,
+  getSampleYearbook,
+  sampleEntries,
+  sampleUsers,
+} from "@/lib/dev/sample-yearbook";
+import { hasSupabaseEnv, isSampleDataMode } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 type WriteEntryPageProps = {
@@ -16,6 +22,69 @@ type WriteEntryPageProps = {
 };
 
 export default async function WriteEntryPage({ params, searchParams }: WriteEntryPageProps) {
+  if (isSampleDataMode) {
+    const yearbook = getSampleYearbook(params.yearbookId);
+    const recipient = getSampleRecipient(params.yearbookId);
+
+    if (!yearbook || !recipient) {
+      return (
+        <WritePageShell yearbookId={params.yearbookId}>
+          <div className="rounded-3xl bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
+            <h2 className="text-xl font-bold">Sample yearbook unavailable</h2>
+            <p className="mt-2 text-stone-700">
+              Sample mode knows User 1 and User 2 only. Open the sample links from the write hub.
+            </p>
+          </div>
+        </WritePageShell>
+      );
+    }
+
+    const existingEntry = sampleEntries.find(
+      (entry) => entry.yearbookId === yearbook.id && entry.authorId === sampleUsers.user1.id,
+    );
+
+    return (
+      <WritePageShell recipientName={recipient.displayName} yearbookId={params.yearbookId}>
+        <p className="mb-6 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
+          Sample data mode is on. You are viewing this as User 1, and entry submission is
+          read-only.
+        </p>
+        <section className="mb-6 rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
+          <p className="text-sm font-semibold text-stone-700">Writing to</p>
+          <h2 className="mt-1 text-2xl font-bold">{recipient.displayName}</h2>
+          <p className="text-sm text-stone-600">
+            {[recipient.university, recipient.graduationClass].filter(Boolean).join(" · ")}
+          </p>
+        </section>
+        {existingEntry ? (
+          <div className="rounded-[2rem] bg-yearbook-paper p-6 text-center shadow-sm ring-1 ring-stone-200">
+            <h2 className="text-2xl font-bold">
+              You&apos;ve already signed {recipient.displayName}&apos;s yearbook.
+            </h2>
+            <p className="mt-2 text-stone-700">
+              Signed on {format(existingEntry.createdAt, "PPP")}. Each yearbook can only receive
+              one note from you.
+            </p>
+            <Link
+              className="mt-5 inline-flex rounded-full bg-yearbook-ink px-5 py-3 text-sm font-semibold text-white"
+              href="/write"
+            >
+              Back to Sign Yearbooks
+            </Link>
+          </div>
+        ) : (
+          <WriteEntryForm
+            authorClass={sampleUsers.user1.graduationClass}
+            authorName={sampleUsers.user1.displayName}
+            authorUniversity={sampleUsers.user1.university}
+            isSampleMode
+            yearbookId={params.yearbookId}
+          />
+        )}
+      </WritePageShell>
+    );
+  }
+
   if (!hasSupabaseEnv) {
     return (
       <WritePageShell yearbookId={params.yearbookId}>

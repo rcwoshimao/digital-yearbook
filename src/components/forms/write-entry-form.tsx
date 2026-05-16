@@ -9,6 +9,7 @@ type WriteEntryFormProps = {
   authorClass: string | null;
   authorName: string;
   authorUniversity: string | null;
+  isSampleMode?: boolean;
   yearbookId: string;
 };
 
@@ -16,6 +17,7 @@ export function WriteEntryForm({
   authorClass,
   authorName,
   authorUniversity,
+  isSampleMode = false,
   yearbookId,
 }: WriteEntryFormProps) {
   const [contentText, setContentText] = useState("");
@@ -43,14 +45,23 @@ export function WriteEntryForm({
 
   return (
     <form
-      action={createEntry}
+      action={isSampleMode ? undefined : createEntry}
       className="rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200"
       onSubmit={(event) => {
-        if (!canSubmit || !window.confirm("Once submitted, you cannot edit or delete this entry. Are you sure?")) {
+        if (
+          isSampleMode ||
+          !canSubmit ||
+          !window.confirm("Once submitted, you cannot edit or delete this entry. Are you sure?")
+        ) {
           event.preventDefault();
         }
       }}
     >
+      {isSampleMode ? (
+        <p className="mb-5 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+          Sample mode is read-only, so this form will not submit to Supabase.
+        </p>
+      ) : null}
       <input name="yearbookId" type="hidden" value={yearbookId} />
       <div>
         <label className="block text-sm font-semibold text-stone-700" htmlFor="contentText">
@@ -99,9 +110,9 @@ export function WriteEntryForm({
       </div>
       <button
         className="mt-6 rounded-full bg-yearbook-ink px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={!canSubmit}
+        disabled={isSampleMode || !canSubmit}
       >
-        Submit Entry
+        {isSampleMode ? "Sample Mode Only" : "Submit Entry"}
       </button>
     </form>
   );

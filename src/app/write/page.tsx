@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { WriteHubSearch } from "@/components/forms/write-hub-search";
 import { WrittenEntryLog } from "@/components/yearbook/written-entry-log";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
+import { sampleEntries, sampleUsers, sampleYearbooks } from "@/lib/dev/sample-yearbook";
+import { hasSupabaseEnv, isSampleDataMode } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import type { YearbookEntry } from "@/lib/types/yearbook";
 
@@ -20,6 +21,47 @@ type EntryRow = {
 };
 
 export default async function WriteHubPage() {
+  if (isSampleDataMode) {
+    const authoredEntries = sampleEntries.filter((entry) => entry.authorId === sampleUsers.user1.id);
+
+    return (
+      <WriteHubShell>
+        <section className="rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yearbook-accent">
+            Write Entries
+          </p>
+          <h1 className="mt-2 text-4xl font-black tracking-tight">Sign a Yearbook</h1>
+          <p className="mt-3 text-stone-700">
+            Sample mode is logged in as User 1. Open User 2&apos;s yearbook to view the sample
+            entry User 1 already wrote.
+          </p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <Link
+              className="rounded-2xl bg-yearbook-ink px-5 py-4 text-sm font-semibold text-white"
+              href={`/write/${sampleYearbooks.user2.id}`}
+            >
+              Open User 2&apos;s yearbook
+            </Link>
+            <Link
+              className="rounded-2xl border border-stone-300 bg-white px-5 py-4 text-sm font-semibold text-stone-700"
+              href={`/write/${sampleYearbooks.user1.id}`}
+            >
+              Open User 1&apos;s yearbook
+            </Link>
+          </div>
+        </section>
+
+        <section className="rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
+          <h2 className="text-xl font-bold">Entries I&apos;ve Written</h2>
+          <p className="mt-2 text-sm text-stone-600">
+            This sample list shows the single entry User 1 wrote to User 2.
+          </p>
+          <WrittenEntryLog entries={authoredEntries} />
+        </section>
+      </WriteHubShell>
+    );
+  }
+
   if (!hasSupabaseEnv) {
     return (
       <WriteHubShell>

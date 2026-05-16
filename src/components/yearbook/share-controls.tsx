@@ -7,11 +7,18 @@ import type { YearbookInvite } from "@/lib/types/yearbook";
 type ShareControlsProps = {
   appUrl: string;
   invites: YearbookInvite[];
+  isSampleMode?: boolean;
   shareMode: "link" | "invite_only";
   yearbookId: string;
 };
 
-export function ShareControls({ appUrl, invites, shareMode, yearbookId }: ShareControlsProps) {
+export function ShareControls({
+  appUrl,
+  invites,
+  isSampleMode = false,
+  shareMode,
+  yearbookId,
+}: ShareControlsProps) {
   const [copyMessage, setCopyMessage] = useState("");
   const shareUrl = `${appUrl}/write/${yearbookId}`;
 
@@ -48,17 +55,35 @@ export function ShareControls({ appUrl, invites, shareMode, yearbookId }: ShareC
         {copyMessage ? <p className="mt-2 text-sm font-semibold text-green-700">{copyMessage}</p> : null}
       </div>
 
-      <form action={addInvite} className="rounded-2xl border border-stone-200 p-4">
+      {isSampleMode ? (
+        <p className="rounded-2xl bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+          Sample mode is read-only. Copying links works, but invite and share mode changes are disabled.
+        </p>
+      ) : null}
+
+      <form
+        action={isSampleMode ? undefined : addInvite}
+        className="rounded-2xl border border-stone-200 p-4"
+        onSubmit={(event) => {
+          if (isSampleMode) {
+            event.preventDefault();
+          }
+        }}
+      >
         <input name="yearbookId" type="hidden" value={yearbookId} />
         <label className="block text-sm font-semibold text-stone-700">
           Invite by Username or User ID
           <input
             className="mt-2 w-full rounded-full border border-stone-300 px-4 py-3 text-sm"
+            disabled={isSampleMode}
             name="invitedUserId"
             placeholder="@username or Supabase user UUID"
           />
         </label>
-        <button className="mt-3 rounded-full bg-yearbook-accent px-4 py-2 text-sm font-semibold text-white">
+        <button
+          className="mt-3 rounded-full bg-yearbook-accent px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={isSampleMode}
+        >
           Invite
         </button>
         <p className="mt-2 text-xs text-stone-500">
@@ -71,30 +96,52 @@ export function ShareControls({ appUrl, invites, shareMode, yearbookId }: ShareC
           <p className="text-sm font-semibold text-stone-700">Invited users</p>
           {invites.map((invite) => (
             <form
-              action={revokeInvite}
+              action={isSampleMode ? undefined : revokeInvite}
               className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm"
               key={invite.id}
+              onSubmit={(event) => {
+                if (isSampleMode) {
+                  event.preventDefault();
+                }
+              }}
             >
               <input name="yearbookId" type="hidden" value={yearbookId} />
               <input name="invitedUserId" type="hidden" value={invite.invitedUserId} />
               <span className="truncate font-mono text-xs">{invite.invitedUserId}</span>
-              <button className="font-semibold text-red-700">Revoke</button>
+              <button className="font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={isSampleMode}>
+                Revoke
+              </button>
             </form>
           ))}
         </div>
       ) : null}
 
-      <form action={updateShareMode} className="rounded-2xl bg-yearbook-paper p-4">
+      <form
+        action={isSampleMode ? undefined : updateShareMode}
+        className="rounded-2xl bg-yearbook-paper p-4"
+        onSubmit={(event) => {
+          if (isSampleMode) {
+            event.preventDefault();
+          }
+        }}
+      >
         <input name="yearbookId" type="hidden" value={yearbookId} />
         <p className="text-sm font-semibold text-stone-700">Share mode</p>
         <div className="mt-3 grid gap-2">
           <label className="flex items-center gap-2 text-sm text-stone-700">
-            <input defaultChecked={shareMode === "link"} name="shareMode" type="radio" value="link" />
+            <input
+              defaultChecked={shareMode === "link"}
+              disabled={isSampleMode}
+              name="shareMode"
+              type="radio"
+              value="link"
+            />
             Anyone with link
           </label>
           <label className="flex items-center gap-2 text-sm text-stone-700">
             <input
               defaultChecked={shareMode === "invite_only"}
+              disabled={isSampleMode}
               name="shareMode"
               type="radio"
               value="invite_only"
@@ -102,7 +149,10 @@ export function ShareControls({ appUrl, invites, shareMode, yearbookId }: ShareC
             Invite only
           </label>
         </div>
-        <button className="mt-3 rounded-full border border-yearbook-accent px-4 py-2 text-sm font-semibold text-yearbook-accent">
+        <button
+          className="mt-3 rounded-full border border-yearbook-accent px-4 py-2 text-sm font-semibold text-yearbook-accent disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={isSampleMode}
+        >
           Save share mode
         </button>
       </form>

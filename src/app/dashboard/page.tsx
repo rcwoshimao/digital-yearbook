@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PdfExportButton } from "@/components/yearbook/pdf-export-button";
 import { ShareControls } from "@/components/yearbook/share-controls";
 import { YearbookFlipbook } from "@/components/yearbook/yearbook-flipbook";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
+import { sampleEntries, sampleInvites, sampleUsers, sampleYearbooks } from "@/lib/dev/sample-yearbook";
+import { hasSupabaseEnv, isSampleDataMode } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import type { YearbookEntry, YearbookInvite } from "@/lib/types/yearbook";
 
@@ -42,6 +42,47 @@ type YearbookRow = {
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  if (isSampleDataMode) {
+    const ownerName = sampleUsers.user1.displayName;
+    const yearbook = sampleYearbooks.user1;
+    const receivedEntries = sampleEntries.filter((entry) => entry.yearbookId === yearbook.id);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+    return (
+      <DashboardShell userName={ownerName}>
+        <SampleModeBanner />
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
+          <div className="rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yearbook-accent">
+                  Your Yearbook
+                </p>
+                <h1 className="mt-2 text-4xl font-black tracking-tight">
+                  Entries written to {ownerName}
+                </h1>
+                <p className="mt-3 max-w-2xl text-stone-600">
+                  Sample mode is showing User 1&apos;s yearbook without requiring a login session.
+                </p>
+              </div>
+              <PdfExportButton entries={receivedEntries} ownerName={ownerName} />
+            </div>
+            <YearbookFlipbook entries={receivedEntries} />
+          </div>
+          <div className="space-y-6">
+            <ShareControls
+              appUrl={appUrl}
+              invites={sampleInvites}
+              isSampleMode
+              shareMode={yearbook.shareMode}
+              yearbookId={yearbook.id}
+            />
+          </div>
+        </section>
+      </DashboardShell>
+    );
+  }
+
   if (!hasSupabaseEnv) {
     return (
       <DashboardShell>
@@ -165,21 +206,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             shareMode={yearbook.share_mode}
             yearbookId={yearbook.id}
           />
-          <section className="rounded-[2rem] bg-yearbook-ink p-6 text-white shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-              Want to sign someone else&apos;s yearbook?
-            </p>
-            <h2 className="mt-2 text-2xl font-bold">Write a memory for a friend</h2>
-            <p className="mt-3 text-sm leading-6 text-white/75">
-              Head to the signing page to find someone or open a shared yearbook link.
-            </p>
-            <Link
-              className="mt-5 inline-flex rounded-full bg-white px-5 py-3 text-sm font-semibold text-yearbook-ink"
-              href="/write"
-            >
-              Sign someone&apos;s yearbook →
-            </Link>
-          </section>
         </div>
       </section>
     </DashboardShell>
@@ -208,4 +234,12 @@ function mapInviteRow(row: InviteRow): YearbookInvite {
     invitedUserId: row.invited_user_id,
     invitedAt: new Date(row.invited_at),
   };
+}
+
+function SampleModeBanner() {
+  return (
+    <p className="mb-6 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
+      Sample data mode is on. Forms that would change Supabase data are disabled.
+    </p>
+  );
 }
