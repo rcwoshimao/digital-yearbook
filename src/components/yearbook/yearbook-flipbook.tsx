@@ -57,37 +57,42 @@ export function YearbookFlipbook({
   const isEmptyYearbook = entries.length === 0;
   const hasSearchResults = filteredEntries.length > 0;
   const shouldRenderBook = isEmptyYearbook || hasSearchResults;
-  const totalPages = (isEmptyYearbook ? 1 : filteredEntries.length) + 2;
   const classLabel = ownerClass ? `Class of ${ownerClass}` : "Class Memories";
-  const bookPages = useMemo(
-    () =>
-      isEmptyYearbook
-        ? [
-            <PageWrapper key="cover">
-              <CoverPage classLabel={classLabel} ownerName={ownerName} ownerUniversity={ownerUniversity} />
-            </PageWrapper>,
-            <PageWrapper key="empty">
-              <EmptyPage shareUrl={shareUrl} />
-            </PageWrapper>,
-            <PageWrapper key="back-cover">
-              <BackCover ownerName={ownerName} />
-            </PageWrapper>,
-          ]
+  const bookPages = useMemo(() => {
+    const coverPage = (
+      <PageWrapper key="cover">
+        <CoverPage classLabel={classLabel} ownerName={ownerName} ownerUniversity={ownerUniversity} />
+      </PageWrapper>
+    );
+    const contentPages = isEmptyYearbook
+      ? [
+          <PageWrapper key="empty">
+            <EmptyPage shareUrl={shareUrl} />
+          </PageWrapper>,
+        ]
+      : filteredEntries.map((entry) => (
+            <PageWrapper key={entry.id}>
+              <EntryCard entry={entry} />
+            </PageWrapper>
+        ));
+    const paddedContentPages =
+      contentPages.length % 2 === 0
+        ? contentPages
         : [
-            <PageWrapper key="cover">
-              <CoverPage classLabel={classLabel} ownerName={ownerName} ownerUniversity={ownerUniversity} />
+            ...contentPages,
+            <PageWrapper key="blank-before-back-cover">
+              <BlankPage />
             </PageWrapper>,
-            ...filteredEntries.map((entry) => (
-              <PageWrapper key={entry.id}>
-                <EntryCard entry={entry} />
-              </PageWrapper>
-            )),
-            <PageWrapper key="back-cover">
-              <BackCover ownerName={ownerName} />
-            </PageWrapper>,
-          ],
-    [classLabel, filteredEntries, isEmptyYearbook, ownerName, ownerUniversity, shareUrl],
-  );
+          ];
+    const backCoverPage = (
+      <PageWrapper key="back-cover">
+        <BackCover ownerName={ownerName} />
+      </PageWrapper>
+    );
+
+    return [coverPage, ...paddedContentPages, backCoverPage];
+  }, [classLabel, filteredEntries, isEmptyYearbook, ownerName, ownerUniversity, shareUrl]);
+  const totalPages = bookPages.length;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -149,7 +154,7 @@ export function YearbookFlipbook({
           No entries match that author.
         </div>
       ) : (
-        <div className="mt-6 flex items-center justify-center gap-3">
+        <div className="mt-6 flex items-center justify-center gap-3 overflow-x-auto px-2">
           <FlipButton label="Previous page" onClick={flipPrev}>
             ‹
           </FlipButton>
@@ -178,7 +183,7 @@ export function YearbookFlipbook({
             style={bookStyle}
             swipeDistance={30}
             useMouseEvents
-            usePortrait
+            usePortrait={false}
             width={pageSize.width}
           >
             {bookPages}
@@ -263,6 +268,10 @@ function EmptyPage({ shareUrl }: { shareUrl: string }) {
       </div>
     </div>
   );
+}
+
+function BlankPage() {
+  return <div className="h-full bg-yearbook-paper" />;
 }
 
 function FlipButton({
