@@ -3,21 +3,36 @@ import { signOut } from "@/app/auth/actions";
 
 type DashboardShellProps = {
   children: React.ReactNode;
+  userName?: string;
 };
 
-export function DashboardShell({ children }: DashboardShellProps) {
+export function DashboardShell({ children, userName }: DashboardShellProps) {
+  const initial = userName?.slice(0, 1).toUpperCase() ?? "Y";
+
   return (
-    <main className="min-h-screen px-6 py-8">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#fff8ed,#f7ead9)] px-6 py-8">
       <div className="mx-auto max-w-7xl">
         <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/" className="text-xl font-bold">
+          <Link href="/dashboard" className="text-xl font-black tracking-tight">
             Digital Yearbook
           </Link>
-          <nav className="flex items-center gap-3 text-sm font-medium text-stone-700">
-            <Link href="/dashboard">Dashboard</Link>
-            <Link href="/profile/me">Profile</Link>
+          <nav className="flex flex-wrap items-center gap-3 text-sm font-medium text-stone-700">
+            <Link className="rounded-full bg-white px-4 py-2 shadow-sm" href="/dashboard">
+              My Yearbook
+            </Link>
+            <Link className="rounded-full px-4 py-2 hover:bg-white/70" href="/write">
+              Sign Yearbooks
+            </Link>
+            <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2 shadow-sm">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-yearbook-accent text-xs font-bold text-white">
+                {initial}
+              </span>
+              <span>{userName ?? "Graduate"}</span>
+            </div>
             <form action={signOut}>
-              <button className="font-medium text-stone-700">Sign out</button>
+              <button className="rounded-full px-3 py-2 font-medium text-stone-700 hover:bg-white/70">
+                Sign out
+              </button>
             </form>
           </nav>
         </header>

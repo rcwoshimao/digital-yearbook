@@ -49,6 +49,32 @@ alter table yearbooks enable row level security;
 alter table yearbook_invites enable row level security;
 alter table entries enable row level security;
 
+create or replace function public.is_yearbook_owner(target_yearbook_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.yearbooks
+    where id = target_yearbook_id and owner_id = auth.uid()
+  );
+$$;
+
+create or replace function public.is_invited_to_yearbook(target_yearbook_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.yearbook_invites
+    where yearbook_id = target_yearbook_id and invited_user_id = auth.uid()
+  );
+$$;
+
 create policy "Public profiles are viewable by authenticated users"
   on profiles for select using (auth.role() = 'authenticated');
 
@@ -66,58 +92,32 @@ create policy "Owner can update own yearbook"
   with check (auth.uid() = owner_id);
 
 create policy "Invited users can read yearbook metadata to write an entry"
-  on yearbooks for select using (
-    exists (
-      select 1 from yearbook_invites
-      where yearbook_id = yearbooks.id and invited_user_id = auth.uid()
-    )
-  );
+  on yearbooks for select using (public.is_invited_to_yearbook(yearbooks.id));
 
 create policy "Link-share yearbooks expose metadata to authenticated writers"
   on yearbooks for select using (share_mode = 'link' and auth.role() = 'authenticated');
 
 create policy "Owners can view invites for own yearbook"
-  on yearbook_invites for select using (
-    exists (
-      select 1 from yearbooks
-      where id = yearbook_invites.yearbook_id and owner_id = auth.uid()
-    )
-  );
+  on yearbook_invites for select using (public.is_yearbook_owner(yearbook_invites.yearbook_id));
 
 create policy "Invited users can view their invite"
   on yearbook_invites for select using (invited_user_id = auth.uid());
 
 create policy "Owners can create invites for own yearbook"
-  on yearbook_invites for insert with check (
-    exists (
-      select 1 from yearbooks
-      where id = yearbook_invites.yearbook_id and owner_id = auth.uid()
-    )
-  );
+  on yearbook_invites for insert with check (public.is_yearbook_owner(yearbook_invites.yearbook_id));
 
 create policy "Owners can revoke invites for own yearbook"
-  on yearbook_invites for delete using (
-    exists (
-      select 1 from yearbooks
-      where id = yearbook_invites.yearbook_id and owner_id = auth.uid()
-    )
-  );
+  on yearbook_invites for delete using (public.is_yearbook_owner(yearbook_invites.yearbook_id));
 
 create policy "Authors can see entries they wrote"
   on entries for select using (auth.uid() = author_id);
 
 create policy "Yearbook owners can see entries written to them"
-  on entries for select using (
-    exists (select 1 from yearbooks where id = entries.yearbook_id and owner_id = auth.uid())
-  );
+  on entries for select using (public.is_yearbook_owner(entries.yearbook_id));
 
 create policy "Yearbook owners can hide entries written to them"
-  on entries for update using (
-    exists (select 1 from yearbooks where id = entries.yearbook_id and owner_id = auth.uid())
-  )
-  with check (
-    exists (select 1 from yearbooks where id = entries.yearbook_id and owner_id = auth.uid())
-  );
+  on entries for update using (public.is_yearbook_owner(entries.yearbook_id))
+  with check (public.is_yearbook_owner(entries.yearbook_id));
 
 create or replace function public.prevent_entry_content_updates()
 returns trigger
@@ -219,10 +219,6 @@ create policy "Authenticated users can insert if they have yearbook access"
     auth.uid() = author_id and
     (
       exists (select 1 from yearbooks where id = yearbook_id and share_mode = 'link')
-      or
-      exists (
-        select 1 from yearbook_invites
-        where yearbook_id = entries.yearbook_id and invited_user_id = auth.uid()
-      )
+      or public.is_invited_to_yearbook(entries.yearbook_id)
     )
   );

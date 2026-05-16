@@ -1,3 +1,6 @@
+ "use client";
+
+import { useState } from "react";
 import { addInvite, revokeInvite, updateShareMode } from "@/app/dashboard/actions";
 import type { YearbookInvite } from "@/lib/types/yearbook";
 
@@ -9,45 +12,60 @@ type ShareControlsProps = {
 };
 
 export function ShareControls({ appUrl, invites, shareMode, yearbookId }: ShareControlsProps) {
-  const shareUrl = `${appUrl}/yearbook/${yearbookId}/write`;
+  const [copyMessage, setCopyMessage] = useState("");
+  const shareUrl = `${appUrl}/write/${yearbookId}`;
+
+  async function copyLink() {
+    await navigator.clipboard.writeText(shareUrl);
+    setCopyMessage("Link copied!");
+    window.setTimeout(() => setCopyMessage(""), 1800);
+  }
 
   return (
-    <div className="space-y-4 rounded-2xl border border-stone-200 bg-yearbook-paper p-4">
+    <section className="space-y-5 rounded-[2rem] border border-stone-200 bg-white/85 p-5 shadow-sm">
       <div>
-        <p className="text-sm font-semibold text-stone-700">Share link</p>
-        <p className="mt-1 break-all font-mono text-xs text-stone-600">{shareUrl}</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-yearbook-accent">
+          Invite people to sign your yearbook
+        </p>
+        <h2 className="mt-2 text-2xl font-bold">Share your yearbook</h2>
       </div>
-      <form action={updateShareMode} className="flex flex-wrap items-end gap-2">
-        <input name="yearbookId" type="hidden" value={yearbookId} />
-        <label className="text-sm font-semibold text-stone-700">
-          Share mode
-          <select
-            className="mt-1 block rounded-full border border-stone-300 bg-white px-3 py-2 text-sm"
-            defaultValue={shareMode}
-            name="shareMode"
+
+      <div>
+        <p className="text-sm font-semibold text-stone-700">Share by Link</p>
+        <div className="mt-2 flex flex-col gap-2 rounded-2xl bg-yearbook-paper p-3 sm:flex-row sm:items-center">
+          <p className="min-w-0 flex-1 break-all font-mono text-xs text-stone-600">{shareUrl}</p>
+          <button
+            className="rounded-full bg-yearbook-ink px-4 py-2 text-sm font-semibold text-white"
+            onClick={copyLink}
+            type="button"
           >
-            <option value="link">Anyone with link</option>
-            <option value="invite_only">Invite only</option>
-          </select>
-        </label>
-        <button className="rounded-full bg-yearbook-ink px-4 py-2 text-sm font-semibold text-white">
-          Save
-        </button>
-      </form>
-      <form action={addInvite} className="flex flex-wrap items-end gap-2">
+            Copy Link
+          </button>
+        </div>
+        {shareMode === "invite_only" ? (
+          <p className="mt-2 text-xs text-stone-600">Only people you&apos;ve invited can use this link.</p>
+        ) : null}
+        {copyMessage ? <p className="mt-2 text-sm font-semibold text-green-700">{copyMessage}</p> : null}
+      </div>
+
+      <form action={addInvite} className="rounded-2xl border border-stone-200 p-4">
         <input name="yearbookId" type="hidden" value={yearbookId} />
-        <label className="min-w-0 flex-1 text-sm font-semibold text-stone-700">
-          Invite by user ID
+        <label className="block text-sm font-semibold text-stone-700">
+          Invite by Username or User ID
           <input
-            className="mt-1 w-full rounded-full border border-stone-300 px-3 py-2 text-sm"
+            className="mt-2 w-full rounded-full border border-stone-300 px-4 py-3 text-sm"
             name="invitedUserId"
-            placeholder="Supabase user UUID"
+            placeholder="@username or Supabase user UUID"
           />
         </label>
-        <button className="rounded-full bg-yearbook-accent px-4 py-2 text-sm font-semibold text-white">
+        <button className="mt-3 rounded-full bg-yearbook-accent px-4 py-2 text-sm font-semibold text-white">
           Invite
         </button>
+        <p className="mt-2 text-xs text-stone-500">
+          Username lookup will be wired when the profile search API is implemented.
+        </p>
       </form>
+
       {invites.length > 0 ? (
         <div className="space-y-2">
           <p className="text-sm font-semibold text-stone-700">Invited users</p>
@@ -65,6 +83,29 @@ export function ShareControls({ appUrl, invites, shareMode, yearbookId }: ShareC
           ))}
         </div>
       ) : null}
-    </div>
+
+      <form action={updateShareMode} className="rounded-2xl bg-yearbook-paper p-4">
+        <input name="yearbookId" type="hidden" value={yearbookId} />
+        <p className="text-sm font-semibold text-stone-700">Share mode</p>
+        <div className="mt-3 grid gap-2">
+          <label className="flex items-center gap-2 text-sm text-stone-700">
+            <input defaultChecked={shareMode === "link"} name="shareMode" type="radio" value="link" />
+            Anyone with link
+          </label>
+          <label className="flex items-center gap-2 text-sm text-stone-700">
+            <input
+              defaultChecked={shareMode === "invite_only"}
+              name="shareMode"
+              type="radio"
+              value="invite_only"
+            />
+            Invite only
+          </label>
+        </div>
+        <button className="mt-3 rounded-full border border-yearbook-accent px-4 py-2 text-sm font-semibold text-yearbook-accent">
+          Save share mode
+        </button>
+      </form>
+    </section>
   );
 }

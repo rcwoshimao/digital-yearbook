@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 
 function encodedMessage(type: "auth_error" | "auth_message", message: string) {
   const params = new URLSearchParams({ [type]: message });
-  return `/?${params.toString()}`;
+  return `/login?${params.toString()}`;
 }
 
 export async function signIn(formData: FormData) {
@@ -58,5 +58,5 @@ export async function signOut() {
     await supabase.auth.signOut();
   }
 
-  redirect("/");
+  redirect("/login");
 }

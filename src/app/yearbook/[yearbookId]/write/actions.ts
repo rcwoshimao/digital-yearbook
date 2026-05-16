@@ -9,7 +9,7 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 function writeUrl(yearbookId: string, type: "entry_error" | "entry_message", message: string) {
   const params = new URLSearchParams({ [type]: message });
-  return `/yearbook/${yearbookId}/write?${params.toString()}`;
+  return `/write/${yearbookId}?${params.toString()}`;
 }
 
 export async function createEntry(formData: FormData) {
@@ -20,7 +20,7 @@ export async function createEntry(formData: FormData) {
     .filter((value): value is File => value instanceof File && value.size > 0);
 
   if (!yearbookId) {
-    redirect("/");
+    redirect("/write");
   }
 
   if (!contentText && imageFiles.length === 0) {
@@ -47,7 +47,7 @@ export async function createEntry(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/");
+    redirect("/login");
   }
 
   const { data: profile, error: profileError } = await supabase
