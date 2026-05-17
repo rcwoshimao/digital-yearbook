@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { BookPage } from "@/components/yearbook/book-page";
+import { EntryPageContent } from "@/components/yearbook/entry-page-content";
+import { FlipbookViewer } from "@/components/yearbook/flipbook-viewer";
 import type { YearbookEntry } from "@/lib/types/yearbook";
+import {
+  defaultYearbookPageStyle,
+  normalizeYearbookPageStyle,
+  type YearbookPageStyle,
+} from "@/lib/yearbook/page-style";
 
 type YearbookFlipbookProps = {
   entries: YearbookEntry[];
@@ -11,6 +19,24 @@ type YearbookFlipbookProps = {
   shareUrl: string;
   toolbarEnd?: React.ReactNode;
   toolbarStart?: React.ReactNode;
+};
+
+type FlipDirection = "next" | "prev";
+
+const coverStyleConfig: YearbookPageStyle = {
+  background_color: "#1a2e4a",
+  border: "none",
+  font: "serif",
+  ink_color: "#fffdf5",
+  pattern: "none",
+};
+
+const backCoverStyleConfig: YearbookPageStyle = {
+  background_color: "#1a2e4a",
+  border: "none",
+  font: "serif",
+  ink_color: "#fffdf5",
+  pattern: "none",
 };
 
 export function YearbookFlipbook({
@@ -24,6 +50,7 @@ export function YearbookFlipbook({
 }: YearbookFlipbookProps) {
   const [query, setQuery] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
+  const [direction, setDirection] = useState<FlipDirection>("next");
   const filteredEntries = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
@@ -63,11 +90,25 @@ export function YearbookFlipbook({
   const currentPage = pageIndex + 1;
 
   const flipPrev = useCallback(() => {
-    setPageIndex((index) => Math.max(0, index - 1));
+    setPageIndex((index) => {
+      if (index <= 0) {
+        return index;
+      }
+
+      setDirection("prev");
+      return index - 1;
+    });
   }, []);
 
   const flipNext = useCallback(() => {
-    setPageIndex((index) => Math.min(totalPages - 1, index + 1));
+    setPageIndex((index) => {
+      if (index >= totalPages - 1) {
+        return index;
+      }
+
+      setDirection("next");
+      return index + 1;
+    });
   }, [totalPages]);
 
   useEffect(() => {
@@ -110,17 +151,17 @@ export function YearbookFlipbook({
           No entries match that author.
         </div>
       ) : (
-        <div>{pages[pageIndex]}</div>
+        <FlipbookViewer direction={direction} pageIndex={pageIndex} pages={pages} />
       )}
       {shouldRenderBook ? (
         <div className="mt-4 flex items-center justify-center gap-4">
-          <FlipButton label="Previous page" onClick={flipPrev}>
+          <FlipButton disabled={pageIndex === 0} label="Previous page" onClick={flipPrev}>
             ‹
           </FlipButton>
           <p className="text-sm font-semibold text-stone-600">
             {currentPage} / {totalPages}
           </p>
-          <FlipButton label="Next page" onClick={flipNext}>
+          <FlipButton disabled={pageIndex >= totalPages - 1} label="Next page" onClick={flipNext}>
             ›
           </FlipButton>
         </div>
@@ -139,59 +180,67 @@ function CoverPage({
   ownerUniversity?: string | null;
 }) {
   return (
-    <div>
-      <p>Digital Yearbook</p>
-      <p>{ownerName}</p>
-      <p>{classLabel}</p>
-      <p>{ownerUniversity ?? "Graduation Memories"}</p>
-    </div>
+    <BookPage styleConfig={coverStyleConfig}>
+      <div className="flex h-full flex-col items-center justify-center gap-4 px-12 text-center">
+        <p className="text-sm uppercase tracking-[0.3em] opacity-60">{classLabel}</p>
+        <h1 className="text-4xl font-bold leading-tight">{ownerName}</h1>
+        <p className="text-base opacity-70">{ownerUniversity ?? "Graduation Memories"}</p>
+        <div className="mt-8 h-px w-16 bg-current opacity-30" />
+        <p className="mt-2 text-xs opacity-40">Your Yearbook</p>
+      </div>
+    </BookPage>
   );
 }
 
 function BackCover({ ownerName }: { ownerName: string }) {
   return (
-    <div>
-      <p>The End</p>
-      <p>{ownerName}&apos;s yearbook</p>
-    </div>
+    <BookPage styleConfig={backCoverStyleConfig}>
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-12 text-center">
+        <p className="text-3xl font-bold">The End</p>
+        <p className="text-sm uppercase tracking-[0.24em] opacity-60">{ownerName}&apos;s yearbook</p>
+      </div>
+    </BookPage>
   );
 }
 
 function EmptyPage({ shareUrl }: { shareUrl: string }) {
   return (
-    <div>
-      <p>No one has signed yet.</p>
-      <p>Share your link and come back!</p>
-      <p>{shareUrl}</p>
-    </div>
+    <BookPage styleConfig={defaultYearbookPageStyle}>
+      <div className="flex h-full flex-col items-center justify-center gap-4 px-10 text-center">
+        <p className="text-2xl font-bold">No one has signed yet.</p>
+        <p className="max-w-xs text-base opacity-80">Share your link and come back!</p>
+        <p className="mt-4 break-all font-mono text-xs opacity-70">{shareUrl}</p>
+      </div>
+    </BookPage>
   );
 }
 
 function EntryPage({ entry }: { entry: YearbookEntry }) {
-  const meta = [entry.authorClass, entry.authorUniversity].filter(Boolean).join(" · ");
+  const styleConfig = normalizeYearbookPageStyle(entry.styleConfig);
 
   return (
-    <div>
-      <p>{entry.authorName}</p>
-      {meta ? <p>{meta}</p> : null}
-      <p>{entry.contentText}</p>
-    </div>
+    <BookPage styleConfig={styleConfig}>
+      <EntryPageContent entry={entry} />
+    </BookPage>
   );
 }
 
 function FlipButton({
   children,
+  disabled,
   label,
   onClick,
 }: {
   children: React.ReactNode;
+  disabled?: boolean;
   label: string;
   onClick: () => void;
 }) {
   return (
     <button
       aria-label={label}
-      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-yearbook-ink text-3xl font-semibold text-white shadow-sm transition hover:bg-yearbook-accent"
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-yearbook-ink text-3xl font-semibold text-white shadow-sm transition hover:bg-yearbook-accent disabled:cursor-not-allowed disabled:opacity-40"
+      disabled={disabled}
       onClick={onClick}
       type="button"
     >
