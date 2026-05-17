@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { clearDraft, readDraft, writeDraft } from "@/lib/canvas/draft";
+import { clearDraft, hasDraft, loadDraftCanvas, saveDraft } from "@/lib/canvas/draft-store";
 import {
   configureCanvasSelectionOverlay,
   getCanvasSelectionOptions,
@@ -211,7 +211,7 @@ export function CanvasEntryEditor({
     bindCanvasEvents(canvas);
     pushHistory(canvas);
 
-    if (readDraft(yearbookId)) {
+    if (hasDraft(yearbookId)) {
       setShowDraftBanner(true);
     }
 
@@ -250,45 +250,35 @@ export function CanvasEntryEditor({
     };
   }, [previewUrl]);
 
-  function canvasHasImages(canvas: Canvas) {
-    return canvas.getObjects().some((object) => isImageObject(object));
-  }
-
-  function getDraftPayload(canvas: Canvas) {
-    const json = canvas.toJSON() as {
-      backgroundImage?: unknown;
-      objects?: Array<{ type?: string }>;
-    };
-
-    if (json.objects) {
-      json.objects = json.objects.filter(
-        (object) => object.type !== "image" && object.type !== "Image",
-      );
-    }
-
-    delete json.backgroundImage;
-
-    return JSON.stringify(json);
-  }
-
   async function resumeDraft() {
     const canvas = fabricRef.current;
-    const raw = readDraft(yearbookId);
-
-    if (!canvas || !raw) {
+    if (!canvas) {
       setShowDraftBanner(false);
       return;
     }
 
     try {
+      const hydrated = await loadDraftCanvas(yearbookId);
+      if (!hydrated) {
+        setShowDraftBanner(false);
+        setToastMessage("Could not restore the saved draft.");
+        return;
+      }
+
       isRestoringRef.current = true;
-      await canvas.loadFromJSON(raw);
+      await canvas.loadFromJSON(hydrated);
       canvas.renderAll();
       pushHistory(canvas);
+
+      const background = canvas.backgroundColor;
+      if (typeof background === "string") {
+        setBackgroundColor(background);
+      }
+
       setShowDraftBanner(false);
       setToastMessage("Draft restored.");
     } catch {
-      clearDraft(yearbookId);
+      await clearDraft(yearbookId);
       setShowDraftBanner(false);
       setToastMessage("Could not restore the saved draft.");
     } finally {
@@ -296,24 +286,21 @@ export function CanvasEntryEditor({
     }
   }
 
-  function discardDraft() {
-    clearDraft(yearbookId);
+  async function discardDraft() {
+    await clearDraft(yearbookId);
     setShowDraftBanner(false);
   }
 
-  function saveDraft() {
+  async function saveDraftToStorage() {
     const canvas = fabricRef.current;
     if (!canvas) {
       return;
     }
 
     try {
-      writeDraft(yearbookId, getDraftPayload(canvas));
-      setToastMessage(
-        canvasHasImages(canvas)
-          ? "Draft saved. Note: images are not preserved in drafts and will need to be re-added."
-          : "Draft saved.",
-      );
+      const canvasJson = canvas.toJSON() as Record<string, unknown>;
+      await saveDraft(yearbookId, canvasJson);
+      setToastMessage("Draft saved.");
     } catch {
       setToastMessage("Could not save draft. Your browser storage may be full.");
     }
@@ -461,7 +448,6 @@ export function CanvasEntryEditor({
     }
 
     setIsSubmitting(true);
-    clearDraft(yearbookId);
 
     try {
       const formData = new FormData();
@@ -471,6 +457,7 @@ export function CanvasEntryEditor({
       await submitCanvasEntry(formData);
     } catch (error) {
       if (isNextNavigationError(error)) {
+        await clearDraft(yearbookId);
         throw error;
       }
 
@@ -503,14 +490,14 @@ export function CanvasEntryEditor({
           <div className="flex gap-2">
             <button
               className="rounded-full bg-yearbook-ink px-4 py-2 text-xs font-semibold text-white"
-              onClick={resumeDraft}
+              onClick={() => void resumeDraft()}
               type="button"
             >
               Resume
             </button>
             <button
               className="rounded-full border border-amber-300 px-4 py-2 text-xs font-semibold text-amber-950"
-              onClick={discardDraft}
+              onClick={() => void discardDraft()}
               type="button"
             >
               Discard
@@ -552,7 +539,7 @@ export function CanvasEntryEditor({
           void restoreHistory(canvas, historyIndexRef.current + 1);
         }}
         onReset={() => setResetConfirmOpen(true)}
-        onSaveDraft={saveDraft}
+        onSaveDraft={() => void saveDraftToStorage()}
         onUndo={() => {
           const canvas = fabricRef.current;
           if (!canvas || historyIndexRef.current <= 0) {
@@ -605,7 +592,7 @@ export function CanvasEntryEditor({
           {[authorUniversity, authorClass].filter(Boolean).join(" · ") || "No school details yet"}
         </p>
         <p className="mt-3 text-xs font-semibold text-amber-800">
-          Once submitted, this entry cannot be edited.
+          Once signed, this entry cannot be edited. However, you can click preview and come back to edit. 
         </p>
       </div>
 
@@ -918,10 +905,6 @@ function dataUrlToBlob(dataUrl: string) {
   }
 
   return new Blob([bytes], { type: mime });
-}
-
-function isImageObject(object: FabricObject) {
-  return object.type === "image" || object.type === "Image";
 }
 
 function isEditableText(object: FabricObject | null | undefined): object is EditableText {
