@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { format } from "date-fns";
+import { EntryPdfPage } from "@/components/yearbook/entry-pdf-page-lazy";
 import type { YearbookEntry } from "@/lib/types/yearbook";
 
 type EntryPageContentProps = {
@@ -11,19 +12,20 @@ export function EntryPageContent({ entry }: EntryPageContentProps) {
 
   if (entry.pdfUrl) {
     return (
-      <article className="flex h-full flex-col p-4">
-        <header className="border-b border-current/20 pb-3">
-          <h3 className="text-xl font-bold">{entry.authorName}</h3>
-          {meta ? <p className="text-sm opacity-70">{meta}</p> : null}
+      <article className="flex h-full min-h-0 flex-col overflow-hidden p-3">
+        <header className="shrink-0 border-b border-current/20 pb-2">
+          <h3 className="text-lg font-bold leading-tight">{entry.authorName}</h3>
+          {meta ? <p className="text-xs opacity-70">{meta}</p> : null}
         </header>
-        <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded-xl border border-current/10 bg-white">
-          <iframe
-            className="h-full w-full"
-            src={entry.pdfUrl}
+        <div className="min-h-0 flex-1 overflow-hidden pt-2">
+          <EntryPdfPage
             title={`${entry.authorName}'s yearbook page`}
+            url={entry.pdfUrl}
           />
         </div>
-        <footer className="mt-4 text-sm opacity-60">Written on {format(entry.createdAt, "PPP")}</footer>
+        <footer className="mt-2 shrink-0 text-xs opacity-60">
+          Written on {format(entry.createdAt, "PPP")}
+        </footer>
       </article>
     );
   }
