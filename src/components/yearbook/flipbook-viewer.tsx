@@ -1,15 +1,33 @@
 "use client";
 
-import { AnimatePresence, motion, type Easing } from "framer-motion";
+import { AnimatePresence, motion, type Easing, type Variants } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 
 export const BOOK_WIDTH = 550;
 export const BOOK_HEIGHT = 733;
 
-const FLIP_DURATION = 0.55;
+const FLIP_DURATION = 0.45;
 const FLIP_EASE: Easing = [0.645, 0.045, 0.355, 1];
 
 type FlipDirection = "next" | "prev";
+
+const pageVariants: Variants = {
+  center: {
+    opacity: 1,
+    scale: 1,
+    x: 0,
+  },
+  enter: (direction: FlipDirection) => ({
+    opacity: 0,
+    scale: 0.96,
+    x: direction === "next" ? 56 : -56,
+  }),
+  exit: (direction: FlipDirection) => ({
+    opacity: 0,
+    scale: 0.96,
+    x: direction === "next" ? -56 : 56,
+  }),
+};
 
 type FlipbookViewerProps = {
   direction: FlipDirection;
@@ -27,32 +45,22 @@ export function FlipbookViewer({ direction, pageIndex, pages }: FlipbookViewerPr
   return (
     <ResponsiveBook>
       <div
-        className="relative"
+        className="relative overflow-hidden"
         style={{
           height: BOOK_HEIGHT,
-          perspective: 1800,
           width: BOOK_WIDTH,
         }}
       >
-        <AnimatePresence custom={direction} mode="wait">
+        <AnimatePresence custom={direction} initial={false}>
           <motion.div
             key={pageIndex}
-            animate={{ opacity: 1, rotateY: 0 }}
+            animate="center"
             className="absolute inset-0 h-full w-full"
             custom={direction}
-            exit={{
-              opacity: 0.6,
-              rotateY: direction === "next" ? -90 : 90,
-            }}
-            initial={{
-              opacity: 0.6,
-              rotateY: direction === "next" ? 90 : -90,
-            }}
-            style={{
-              transformOrigin: direction === "next" ? "left center" : "right center",
-              transformStyle: "preserve-3d",
-            }}
+            exit="exit"
+            initial="enter"
             transition={{ duration: FLIP_DURATION, ease: FLIP_EASE }}
+            variants={pageVariants}
           >
             {page}
           </motion.div>
@@ -80,7 +88,7 @@ function ResponsiveBook({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="mx-auto mt-12" style={{ height: BOOK_HEIGHT * scale, overflow: "hidden", width: maxWidth }}>
+    <div className="mx-auto mt-12" style={{ height: BOOK_HEIGHT * scale, width: maxWidth }}>
       <div
         style={{
           height: BOOK_HEIGHT,

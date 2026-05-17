@@ -1,0 +1,24 @@
+# Cursor Prompt: Two-Page Spread Layout
+
+## Goal
+Update `FlipbookViewer` to display entries as a two-page book spread.
+
+## Layout Rules
+- Container is always double-page width (two pages side by side), fixed
+- **Cover and back cover**: single page centered in the double-width container, other half is empty
+- **All middle spreads**: two entries side by side, left and right
+- **Odd number of entries**: last spread shows one entry on the left, blank white page on the right. The blank page should have a subtle decorative flourish or faint watermark — not just empty white
+
+## Spread Index Logic
+Build a `getSpreads(entries)` helper that chunks entries into spreads:
+- `spreads[0]` = cover (single)
+- `spreads[1..n-1]` = pairs of entries, padding with `null` if odd
+- `spreads[n]` = back cover (single)
+
+The existing prev/next navigation and keyboard controls advance by spread, not by individual page.
+
+## Animation
+Keep the existing Framer Motion slide transition as-is. It already operates on the whole spread so no changes needed there.
+
+## Responsive
+On mobile (< 640px), drop back to single-page view regardless of spread position — double spreads are too small to be readable on narrow screens.
