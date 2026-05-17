@@ -1,206 +1,201 @@
-# Cursor Prompt: Flipbook Viewer + Entry Styling
-> Addendum to `yearbook_cursor_prompt.md` and `yearbook_ui_flow.md`.
-> This prompt covers two focused implementation steps.
+# Cursor Prompt: Replace react-pageflip with Framer Motion Flipbook
+
+> Addendum to `yearbook_flipbook_styling_prompt.md`.
+> Rip out `react-pageflip` entirely and implement the flipbook using Framer Motion.
 
 ---
 
-## Step 1: Flipbook Viewer on the Dashboard
+## Setup
 
-### Goal
-Replace whatever list or grid currently renders entries on `/dashboard` with a realistic page-flip book viewer. The user should feel like they are physically flipping through a yearbook.
-
-### Library
-Use **`react-pageflip`** (`npm install react-pageflip`).
-- Wrap the book in a fixed-size container centered on the page
-- Render two pages side-by-side on desktop (left page + right page), single page on mobile
-- The first left page should be a decorative cover page: user's name, graduation class, university, and a "Class of 20XX" title. Style it like a book cover.
-
-### Book Structure
+```bash
+npm uninstall react-pageflip
+npm install framer-motion
 ```
-[Cover Page] [Entry 1] [Entry 2] [Entry 3] ... [Back Cover]
-```
-- Cover page: static, always first, not an entry
-- Back cover: static, always last, blank or decorative
-- Each entry occupies exactly one page
-- Pages turn with a realistic curl animation on click or drag
 
-### Implementation Details
-- Wrap `HTMLFlipBook` from `react-pageflip` in a `<YearbookBook>` component
-- Each child of `HTMLFlipBook` must be a `<PageWrapper>` — a `forwardRef` div with fixed dimensions
-- Page dimensions: **550px wide × 733px tall** on desktop (standard book ratio). Scale down proportionally on smaller screens using a wrapper that observes viewport width.
-- Pass `drawShadow={true}`, `showCover={true}`, `mobileScrollSupport={true}` as props
-- Navigation: render left `‹` and right `›` arrow buttons outside the book (not inside page children). Wire them to `bookRef.current.pageFlip().flipPrev()` and `.flipNext()`.
-- Page number indicator below the book: "3 / 12" format
-- Keyboard: left/right arrow keys call the same flip methods via a `useEffect` event listener
-
-### Responsive Behavior
-- Desktop (≥ 1024px): two-page spread
-- Tablet (640–1023px): single page, width ~420px
-- Mobile (< 640px): single page, full width minus 32px padding, recalculate height proportionally
-
-### Empty State
-If the user has no entries yet, show a single "empty" page inside the book with centered text:
-> "No one has signed yet. Share your link and come back!"
-Show the share link prominently below this message.
+Load the `Caveat` font from Google Fonts in `layout.tsx` if not already present.
 
 ---
 
-## Step 2: Entry Styling — Customization Panel on the Write Form
+## Core Concept
 
-### Goal
-When an author writes an entry on `/write`, they can customize how their page looks in the recipient's yearbook. The choices are saved as a `style_config` JSON column on the entry. The book viewer reads this JSON and renders each page accordingly. There is only **one page layout** for now — customization is purely visual (colors, font, pattern).
+The flip is a **3D Y-axis rotation** on a card. Each page has a **front face** and a **back face** baked into the same `motion.div`. When the user navigates forward, the current page rotates from `0°` to `-180°` (revealing its back), and the next page rotates from `180°` to `0°` (coming into view). Both animate simultaneously.
 
-### Database Change
-Add a column to the `entries` table:
-```sql
-alter table entries
-  add column style_config jsonb not null default '{
-    "background_color": "#fffdf5",
-    "pattern": "none",
-    "font": "serif",
-    "ink_color": "#1a1a1a",
-    "border": "none"
-  }';
-```
-This column is set at insert time and never updated (immutability still applies).
+Use CSS `preserve-3d` and `backface-visibility: hidden` to make the two faces work correctly.
 
-### Style Options to Support
+---
 
-#### Background Color
-A row of 8 color swatches the author clicks to select. Suggested palette (warm, yearbook-appropriate):
-| Name | Hex |
-|---|---|
-| Cream (default) | `#fffdf5` |
-| Blush | `#fdecea` |
-| Mint | `#e8f5f0` |
-| Sky | `#e8f0fd` |
-| Lavender | `#f0e8fd` |
-| Sunflower | `#fdf8e1` |
-| Rose | `#fde8f0` |
-| Slate | `#e8edf5` |
-
-#### Page Pattern (overlaid on background color)
-A subtle texture rendered as a CSS background on top of the solid color. Use CSS only — no image assets needed.
-| Pattern key | CSS implementation |
-|---|---|
-| `none` | no additional background |
-| `lined` | repeating horizontal lines, 1px `rgba(0,0,0,0.07)` every 28px |
-| `dotted` | CSS radial-gradient dot grid, 2px dots every 20px |
-| `grid` | thin crosshatch grid, 1px lines every 24px |
-
-#### Font
-3 options rendered as a live preview label:
-| Font key | CSS font stack | Preview label |
-|---|---|---|
-| `serif` (default) | `'Georgia', serif` | Classic |
-| `handwritten` | `'Caveat', cursive` (load from Google Fonts) | Handwritten |
-| `mono` | `'Courier New', monospace` | Typewriter |
-
-#### Ink Color (text color)
-4 options as small circular swatches:
-- Ink Black `#1a1a1a` (default)
-- Navy `#1a2e4a`
-- Forest `#1a3a2a`
-- Burgundy `#4a1a1a`
-
-#### Border
-A decorative border around the page edge. Rendered as an inset CSS border or box-shadow on the page.
-| Border key | Style |
-|---|---|
-| `none` (default) | no border |
-| `classic` | 2px solid `rgba(0,0,0,0.15)`, inset 12px |
-| `double` | double border: 1px solid outer, 1px solid inner with 8px gap |
-| `corner` | decorative corner marks only (CSS pseudo-elements, no full border) |
-
-### Customization Panel UI (on `/write` page)
-
-Place the panel **to the right of or below the text area**, depending on screen size. It should show a **live preview** of the page as the author adjusts options.
-
-```
-┌─── Decorate Your Page ──────────────────────────────────┐
-│                                                         │
-│  Background                                             │
-│  [■ cream] [■ blush] [■ mint] [■ sky]                   │
-│  [■ lavender] [■ sunflower] [■ rose] [■ slate]          │
-│                                                         │
-│  Pattern                                                │
-│  [○ None] [○ Lined] [○ Dotted] [○ Grid]                 │
-│                                                         │
-│  Font                                                   │
-│  [○ Classic] [○ Handwritten] [○ Typewriter]             │
-│                                                         │
-│  Ink Color                                              │
-│  [● ink black] [○ navy] [○ forest] [○ burgundy]         │
-│                                                         │
-│  Border                                                 │
-│  [○ None] [○ Classic] [○ Double] [○ Corner]             │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Live Preview
-- Next to (or above) the customization panel, render a **scaled-down version of the page** (roughly 40% scale using CSS `transform: scale(0.4)`) that updates in real time as the author changes options
-- The preview shows: the background color + pattern, a few lines of their typed text in the chosen font and ink color, and the border
-- Label it "Preview" above the scaled page
-- This is purely a frontend React state update — no API calls needed for preview
-
-### Saving style_config on Submit
-When the author submits the entry form, include `style_config` in the POST body:
-```json
-{
-  "yearbook_id": "...",
-  "content_text": "...",
-  "image_urls": [],
-  "style_config": {
-    "background_color": "#fdecea",
-    "pattern": "lined",
-    "font": "handwritten",
-    "ink_color": "#1a2e4a",
-    "border": "classic"
-  }
-}
-```
-The API route writes this as-is into the `style_config` jsonb column. No validation beyond checking all keys are present.
-
-### Rendering style_config in the Flipbook
-
-Each `<PageWrapper>` in the flipbook reads the entry's `style_config` and applies styles:
+## Component: `<FlipbookViewer>`
 
 ```tsx
-// Pseudocode for the page renderer
-function EntryPage({ entry }) {
-  const { background_color, pattern, font, ink_color, border } = entry.style_config;
+// components/FlipbookViewer.tsx
+"use client";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+const FLIP_DURATION = 0.55; // seconds
+const FLIP_EASE = [0.645, 0.045, 0.355, 1.0]; // cubic-bezier, feels physical
+
+export function FlipbookViewer({ pages }: { pages: React.ReactNode[] }) {
+  const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState<"next" | "prev">("next");
+
+  const goNext = () => {
+    if (current < pages.length - 1) {
+      setDirection("next");
+      setCurrent((c) => c + 1);
+    }
+  };
+
+  const goPrev = () => {
+    if (current > 0) {
+      setDirection("prev");
+      setCurrent((c) => c - 1);
+    }
+  };
 
   return (
-    <div
-      style={{
-        backgroundColor: background_color,
-        fontFamily: fontMap[font],
-        color: ink_color,
-        // pattern applied via a CSS class
-        // border applied via a CSS class
-      }}
-      className={`page-base pattern-${pattern} border-${border}`}
+    <div className="flex flex-col items-center gap-6">
+      {/* Book stage */}
+      <div
+        className="relative"
+        style={{ width: 550, height: 733, perspective: 1800 }}
+      >
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={current}
+            custom={direction}
+            initial={{ rotateY: direction === "next" ? 90 : -90, opacity: 0.6 }}
+            animate={{ rotateY: 0, opacity: 1 }}
+            exit={{ rotateY: direction === "next" ? -90 : 90, opacity: 0.6 }}
+            transition={{ duration: FLIP_DURATION, ease: FLIP_EASE }}
+            style={{ transformOrigin: direction === "next" ? "left center" : "right center" }}
+            className="absolute inset-0 w-full h-full"
+          >
+            {pages[current]}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center gap-6">
+        <NavButton onClick={goPrev} disabled={current === 0} label="‹" />
+        <span className="text-sm text-neutral-400 tabular-nums">
+          {current + 1} / {pages.length}
+        </span>
+        <NavButton onClick={goNext} disabled={current === pages.length - 1} label="›" />
+      </div>
+    </div>
+  );
+}
+
+function NavButton({ onClick, disabled, label }: { onClick: () => void; disabled: boolean; label: string }) {
+  return (
+    <motion.button
+      onClick={onClick}
+      disabled={disabled}
+      whileHover={!disabled ? { scale: 1.1 } : {}}
+      whileTap={!disabled ? { scale: 0.95 } : {}}
+      className="w-10 h-10 rounded-full flex items-center justify-center text-xl
+                 bg-white border border-neutral-200 shadow-sm
+                 disabled:opacity-30 disabled:cursor-not-allowed"
     >
-      <AuthorHeader entry={entry} />
-      <EntryBody text={entry.content_text} images={entry.image_urls} />
-      <EntryFooter timestamp={entry.created_at} />
+      {label}
+    </motion.button>
+  );
+}
+```
+
+---
+
+## Keyboard Navigation
+
+Add this in the parent page component (e.g. `/dashboard`):
+
+```tsx
+useEffect(() => {
+  const handler = (e: KeyboardEvent) => {
+    if (e.key === "ArrowRight") goNext();
+    if (e.key === "ArrowLeft") goPrev();
+  };
+  window.addEventListener("keydown", handler);
+  return () => window.removeEventListener("keydown", handler);
+}, [current]);
+```
+
+---
+
+## Page Wrapper
+
+Every page passed into `<FlipbookViewer>` should use this wrapper so sizing and shadow are consistent:
+
+```tsx
+function BookPage({ children, style_config }) {
+  return (
+    <div
+      className="w-full h-full rounded-sm overflow-hidden"
+      style={{
+        backgroundColor: style_config.background_color,
+        fontFamily: fontMap[style_config.font],
+        color: style_config.ink_color,
+        boxShadow: "0 4px 24px rgba(0,0,0,0.12), 2px 0 8px rgba(0,0,0,0.06)",
+      }}
+    >
+      {children}
     </div>
   );
 }
 ```
 
-Define `.pattern-lined`, `.pattern-dotted`, `.pattern-grid` as utility CSS classes (or Tailwind `@apply` blocks) that add the background pattern on top of the solid color using `background-image`.
+The `boxShadow` gives it a subtle book-page depth without needing a heavy library.
 
 ---
 
-## Build Order
+## Responsive Sizing
 
-1. Install `react-pageflip` and `Caveat` Google Font
-2. Build `<YearbookBook>` with static cover + dummy pages to confirm flip animation works
-3. Wire real entries into the flipbook pages with basic unstyled `<EntryPage>`
-4. Add `style_config` column to Supabase
-5. Build the customization panel on `/write` with live preview (local state only)
-6. Apply `style_config` rendering in `<EntryPage>` (CSS classes + inline styles)
-7. Wire `style_config` into the POST on submit
-8. Test a full round-trip: write styled entry → appears correctly styled in recipient's flipbook
+Wrap the viewer in a container that scales it down on smaller screens:
+
+```tsx
+// Scale the 550x733 stage to fit the viewport
+function ResponsiveBook({ children }) {
+  const maxWidth = Math.min(550, window.innerWidth - 48);
+  const scale = maxWidth / 550;
+  return (
+    <div style={{ width: maxWidth, height: 733 * scale, overflow: "hidden" }}>
+      <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: 550, height: 733 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## Cover Page
+
+The first page is always the cover — not an entry. Pass it as `pages[0]`:
+
+```tsx
+const coverPage = (
+  <BookPage style_config={{ background_color: "#1a2e4a", font: "serif", ink_color: "#fffdf5", pattern: "none", border: "none" }}>
+    <div className="flex flex-col items-center justify-center h-full gap-4 px-12 text-center">
+      <p className="text-sm uppercase tracking-[0.3em] opacity-60">Class of 2025</p>
+      <h1 className="text-4xl font-bold leading-tight">{ownerName}</h1>
+      <p className="text-base opacity-70">{ownerUniversity}</p>
+      <div className="mt-8 w-16 h-px bg-current opacity-30" />
+      <p className="text-xs opacity-40 mt-2">Your Yearbook</p>
+    </div>
+  </BookPage>
+);
+```
+
+Adjust the cover color to match whatever Unsplash image or design direction you land on.
+
+---
+
+## Notes
+
+- `AnimatePresence mode="wait"` ensures the exit animation fully completes before the next page enters — this is what makes the flip feel like a real page turn rather than a crossfade
+- `transformOrigin` switches between left and right depending on direction, so forward flips feel like turning a right-hand page and backward flips feel like turning back
+- Do not use `layout` prop on the motion div — it conflicts with the 3D transform
+- The `perspective: 1800` on the stage container controls how dramatic the 3D effect looks; increase for more subtle, decrease for more dramatic
