@@ -45,12 +45,6 @@ export function mapEntryRow(row: EntryRow, signedAssets?: Partial<SignedEntryAss
   };
 }
 
-export function getEntryPreviewLabel(
-  entry: Pick<YearbookEntry, "pageImageUrl" | "pdfUrl" | "contentText">,
-): string {
-  return entry.pageImageUrl || entry.pdfUrl ? "Signed canvas page" : entry.contentText;
-}
-
 export async function signEntryRowAssets(
   supabase: SupabaseClient,
   row: EntryRow,
