@@ -22,8 +22,9 @@ configureCanvasSelectionOverlay();
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
-/** Rasterize the page above 72 DPI before embedding in the PDF (~216 DPI at A4). */
+/** Rasterize the page above 72 DPI before embedding in the PDF (~216 DPI at A4 when 3). */
 const PDF_EXPORT_MULTIPLIER = 3;
+const PDF_EXPORT_JPEG_QUALITY = 0.9;
 const HISTORY_LIMIT = 30;
 const MOBILE_MAX_WIDTH = 767;
 
@@ -431,12 +432,12 @@ export function CanvasEntryEditor({
     }
 
     const dataUrl = canvas.toDataURL({
-      format: "png",
-      quality: 1,
+      format: "jpeg",
+      quality: PDF_EXPORT_JPEG_QUALITY,
       multiplier: PDF_EXPORT_MULTIPLIER,
     });
     const pdf = new jsPDF({ unit: "px", format: [PAGE_WIDTH, PAGE_HEIGHT] });
-    pdf.addImage(dataUrl, "PNG", 0, 0, PAGE_WIDTH, PAGE_HEIGHT, undefined, "NONE");
+    pdf.addImage(dataUrl, "JPEG", 0, 0, PAGE_WIDTH, PAGE_HEIGHT, undefined, "NONE");
     const blob = pdf.output("blob");
     compiledPdfRef.current = blob;
 
