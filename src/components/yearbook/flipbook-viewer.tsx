@@ -5,6 +5,8 @@ import { useEffect, useState, type ReactNode } from "react";
 
 export const BOOK_WIDTH = 550;
 export const BOOK_HEIGHT = 733;
+export const SPREAD_WIDTH = BOOK_WIDTH * 2;
+const MOBILE_BREAKPOINT = 640;
 
 const FLIP_DURATION = 0.45;
 const FLIP_EASE: Easing = [0.645, 0.045, 0.355, 1];
@@ -31,29 +33,47 @@ const pageVariants: Variants = {
 
 type FlipbookViewerProps = {
   direction: FlipDirection;
-  pageIndex: number;
-  pages: ReactNode[];
+  isMobile: boolean;
+  spreadIndex: number;
+  spreads: ReactNode[];
 };
 
-export function FlipbookViewer({ direction, pageIndex, pages }: FlipbookViewerProps) {
-  const page = pages[pageIndex];
+export function useIsMobileBook() {
+  const [isMobile, setIsMobile] = useState(false);
 
-  if (!page) {
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const update = () => setIsMobile(media.matches);
+
+    update();
+    media.addEventListener("change", update);
+
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  return isMobile;
+}
+
+export function FlipbookViewer({ direction, isMobile, spreadIndex, spreads }: FlipbookViewerProps) {
+  const spread = spreads[spreadIndex];
+  const stageWidth = isMobile ? BOOK_WIDTH : SPREAD_WIDTH;
+
+  if (!spread) {
     return null;
   }
 
   return (
-    <ResponsiveBook>
+    <ResponsiveBook stageWidth={stageWidth}>
       <div
         className="relative overflow-hidden"
         style={{
           height: BOOK_HEIGHT,
-          width: BOOK_WIDTH,
+          width: stageWidth,
         }}
       >
         <AnimatePresence custom={direction} initial={false}>
           <motion.div
-            key={pageIndex}
+            key={spreadIndex}
             animate="center"
             className="absolute inset-0 h-full w-full"
             custom={direction}
@@ -62,7 +82,7 @@ export function FlipbookViewer({ direction, pageIndex, pages }: FlipbookViewerPr
             transition={{ duration: FLIP_DURATION, ease: FLIP_EASE }}
             variants={pageVariants}
           >
-            {page}
+            {spread}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -70,31 +90,40 @@ export function FlipbookViewer({ direction, pageIndex, pages }: FlipbookViewerPr
   );
 }
 
-function ResponsiveBook({ children }: { children: ReactNode }) {
+function ResponsiveBook({
+  children,
+  stageWidth,
+}: {
+  children: ReactNode;
+  stageWidth: number;
+}) {
   const [scale, setScale] = useState(1);
-  const [maxWidth, setMaxWidth] = useState(BOOK_WIDTH);
+  const [containerWidth, setContainerWidth] = useState(stageWidth);
 
   useEffect(() => {
     function updateScale() {
-      const nextMaxWidth = Math.min(BOOK_WIDTH, window.innerWidth - 48);
-      setMaxWidth(nextMaxWidth);
-      setScale(nextMaxWidth / BOOK_WIDTH);
+      const nextContainerWidth = Math.min(stageWidth, window.innerWidth - 48);
+      setContainerWidth(nextContainerWidth);
+      setScale(nextContainerWidth / stageWidth);
     }
 
     updateScale();
     window.addEventListener("resize", updateScale);
 
     return () => window.removeEventListener("resize", updateScale);
-  }, []);
+  }, [stageWidth]);
 
   return (
-    <div className="mx-auto mt-12" style={{ height: BOOK_HEIGHT * scale, width: maxWidth }}>
+    <div
+      className="mx-auto mt-12"
+      style={{ height: BOOK_HEIGHT * scale, width: containerWidth }}
+    >
       <div
         style={{
           height: BOOK_HEIGHT,
           transform: `scale(${scale})`,
           transformOrigin: "top left",
-          width: BOOK_WIDTH,
+          width: stageWidth,
         }}
       >
         {children}

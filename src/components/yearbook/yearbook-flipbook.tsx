@@ -1,10 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  BlankSpreadPage,
+  BookSpreadLayout,
+  SpreadPageSlot,
+} from "@/components/yearbook/book-spread";
 import { BookPage } from "@/components/yearbook/book-page";
 import { EntryPageContent } from "@/components/yearbook/entry-page-content";
-import { FlipbookViewer } from "@/components/yearbook/flipbook-viewer";
+import { FlipbookViewer, useIsMobileBook } from "@/components/yearbook/flipbook-viewer";
 import type { YearbookEntry } from "@/lib/types/yearbook";
+import {
+  getSpreads,
+  type BookSpreadModel,
+  type ContentSpreadLeft,
+} from "@/lib/yearbook/get-spreads";
 import {
   defaultYearbookPageStyle,
   normalizeYearbookPageStyle,
@@ -49,8 +59,9 @@ export function YearbookFlipbook({
   toolbarStart,
 }: YearbookFlipbookProps) {
   const [query, setQuery] = useState("");
-  const [pageIndex, setPageIndex] = useState(0);
+  const [spreadIndex, setSpreadIndex] = useState(0);
   const [direction, setDirection] = useState<FlipDirection>("next");
+  const isMobile = useIsMobileBook();
   const filteredEntries = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
@@ -64,33 +75,29 @@ export function YearbookFlipbook({
   const hasSearchResults = filteredEntries.length > 0;
   const shouldRenderBook = isEmptyYearbook || hasSearchResults;
   const classLabel = ownerClass ? `Class of ${ownerClass}` : "Class Memories";
-  const pages = useMemo(() => {
-    const list: React.ReactNode[] = [
-      <CoverPage
-        key="cover"
-        classLabel={classLabel}
-        ownerName={ownerName}
-        ownerUniversity={ownerUniversity}
-      />,
-    ];
-
-    if (isEmptyYearbook) {
-      list.push(<EmptyPage key="empty" shareUrl={shareUrl} />);
-    } else {
-      filteredEntries.forEach((entry) => {
-        list.push(<EntryPage entry={entry} key={entry.id} />);
-      });
-    }
-
-    list.push(<BackCover key="back-cover" ownerName={ownerName} />);
-
-    return list;
-  }, [classLabel, filteredEntries, isEmptyYearbook, ownerName, ownerUniversity, shareUrl]);
-  const totalPages = pages.length;
-  const currentPage = pageIndex + 1;
+  const spreadModels = useMemo(() => getSpreads(filteredEntries), [filteredEntries]);
+  const spreads = useMemo(
+    () =>
+      isMobile
+        ? buildMobileViews(spreadModels, {
+            classLabel,
+            ownerName,
+            ownerUniversity,
+            shareUrl,
+          })
+        : buildSpreadViews(spreadModels, {
+            classLabel,
+            ownerName,
+            ownerUniversity,
+            shareUrl,
+          }),
+    [classLabel, isMobile, ownerName, ownerUniversity, shareUrl, spreadModels],
+  );
+  const totalSpreads = spreads.length;
+  const currentSpread = spreadIndex + 1;
 
   const flipPrev = useCallback(() => {
-    setPageIndex((index) => {
+    setSpreadIndex((index) => {
       if (index <= 0) {
         return index;
       }
@@ -101,19 +108,19 @@ export function YearbookFlipbook({
   }, []);
 
   const flipNext = useCallback(() => {
-    setPageIndex((index) => {
-      if (index >= totalPages - 1) {
+    setSpreadIndex((index) => {
+      if (index >= totalSpreads - 1) {
         return index;
       }
 
       setDirection("next");
       return index + 1;
     });
-  }, [totalPages]);
+  }, [totalSpreads]);
 
   useEffect(() => {
-    setPageIndex((index) => Math.min(index, Math.max(0, pages.length - 1)));
-  }, [pages.length]);
+    setSpreadIndex((index) => Math.min(index, Math.max(0, spreads.length - 1)));
+  }, [spreads.length]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -151,23 +158,119 @@ export function YearbookFlipbook({
           No entries match that author.
         </div>
       ) : (
-        <FlipbookViewer direction={direction} pageIndex={pageIndex} pages={pages} />
+        <FlipbookViewer
+          direction={direction}
+          isMobile={isMobile}
+          spreadIndex={spreadIndex}
+          spreads={spreads}
+        />
       )}
       {shouldRenderBook ? (
         <div className="mt-4 flex items-center justify-center gap-4">
-          <FlipButton disabled={pageIndex === 0} label="Previous page" onClick={flipPrev}>
+          <FlipButton disabled={spreadIndex === 0} label="Previous spread" onClick={flipPrev}>
             ‹
           </FlipButton>
           <p className="text-sm font-semibold text-stone-600">
-            {currentPage} / {totalPages}
+            {currentSpread} / {totalSpreads}
           </p>
-          <FlipButton disabled={pageIndex >= totalPages - 1} label="Next page" onClick={flipNext}>
+          <FlipButton
+            disabled={spreadIndex >= totalSpreads - 1}
+            label="Next spread"
+            onClick={flipNext}
+          >
             ›
           </FlipButton>
         </div>
       ) : null}
     </div>
   );
+}
+
+type SpreadViewContext = {
+  classLabel: string;
+  ownerName: string;
+  ownerUniversity?: string | null;
+  shareUrl: string;
+};
+
+function buildSpreadViews(models: BookSpreadModel[], context: SpreadViewContext) {
+  return models.map((model, index) => renderSpread(model, context, `spread-${index}`));
+}
+
+function buildMobileViews(models: BookSpreadModel[], context: SpreadViewContext) {
+  const pages: React.ReactNode[] = [];
+
+  models.forEach((model, index) => {
+    if (model.kind === "cover") {
+      pages.push(
+        <CoverPage
+          key={`mobile-cover-${index}`}
+          classLabel={context.classLabel}
+          ownerName={context.ownerName}
+          ownerUniversity={context.ownerUniversity}
+        />,
+      );
+      return;
+    }
+
+    if (model.kind === "back") {
+      pages.push(<BackCover key={`mobile-back-${index}`} ownerName={context.ownerName} />);
+      return;
+    }
+
+    pages.push(renderContentPage(model.left, context, `mobile-left-${index}`));
+
+    if (model.right) {
+      pages.push(<EntryPage entry={model.right} key={`mobile-right-${index}`} />);
+    } else {
+      pages.push(<BlankSpreadPage key={`mobile-blank-${index}`} />);
+    }
+  });
+
+  return pages;
+}
+
+function renderSpread(model: BookSpreadModel, context: SpreadViewContext, key: string) {
+  if (model.kind === "cover") {
+    return (
+      <BookSpreadLayout key={key} variant="cover">
+        <CoverPage
+          classLabel={context.classLabel}
+          ownerName={context.ownerName}
+          ownerUniversity={context.ownerUniversity}
+        />
+      </BookSpreadLayout>
+    );
+  }
+
+  if (model.kind === "back") {
+    return (
+      <BookSpreadLayout key={key} variant="back">
+        <BackCover ownerName={context.ownerName} />
+      </BookSpreadLayout>
+    );
+  }
+
+  return (
+    <BookSpreadLayout key={key} variant="spread">
+      <SpreadPageSlot>{renderContentPage(model.left, context, `${key}-left`)}</SpreadPageSlot>
+      {model.right ? (
+        <SpreadPageSlot>
+          <EntryPage entry={model.right} />
+        </SpreadPageSlot>
+      ) : (
+        <BlankSpreadPage />
+      )}
+    </BookSpreadLayout>
+  );
+}
+
+function renderContentPage(left: ContentSpreadLeft, context: SpreadViewContext, key: string) {
+  if (left === "empty") {
+    return <EmptyPage key={key} shareUrl={context.shareUrl} />;
+  }
+
+  return <EntryPage entry={left} key={key} />;
 }
 
 function CoverPage({
