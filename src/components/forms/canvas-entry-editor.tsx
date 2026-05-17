@@ -12,7 +12,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { clearDraft, readDraft, writeDraft } from "@/lib/canvas/draft";
+import {
+  configureCanvasSelectionOverlay,
+  getCanvasSelectionOptions,
+} from "@/lib/canvas/selection-overlay";
 import { isNextNavigationError } from "@/lib/next/is-redirect-error";
+
+configureCanvasSelectionOverlay();
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
@@ -195,6 +201,7 @@ export function CanvasEntryEditor({
       width: PAGE_WIDTH,
       height: PAGE_HEIGHT,
       backgroundColor: "#ffffff",
+      ...getCanvasSelectionOptions(),
     });
 
     fabricRef.current = canvas;
