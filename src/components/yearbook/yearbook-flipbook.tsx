@@ -8,6 +8,7 @@ import {
 } from "@/components/yearbook/book-spread";
 import { BookPage } from "@/components/yearbook/book-page";
 import { EntryPageContent } from "@/components/yearbook/entry-page-content";
+import { BackCoverPage, CoverPage } from "@/components/yearbook/yearbook-cover-page";
 import { FlipbookViewer, useIsMobileBook } from "@/components/yearbook/flipbook-viewer";
 import type { YearbookEntry } from "@/lib/types/yearbook";
 import {
@@ -18,9 +19,7 @@ import {
 import {
   defaultYearbookPageStyle,
   normalizeYearbookPageStyle,
-  type YearbookPageStyle,
 } from "@/lib/yearbook/page-style";
-import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
 
 type YearbookFlipbookProps = {
   entries: YearbookEntry[];
@@ -33,22 +32,6 @@ type YearbookFlipbookProps = {
 };
 
 type FlipDirection = "next" | "prev";
-
-const coverStyleConfig: YearbookPageStyle = {
-  background_color: "#1a2e4a",
-  border: "none",
-  font: "serif",
-  ink_color: YEARBOOK_THEME_FALLBACKS.page,
-  pattern: "none",
-};
-
-const backCoverStyleConfig: YearbookPageStyle = {
-  background_color: "#1a2e4a",
-  border: "none",
-  font: "serif",
-  ink_color: YEARBOOK_THEME_FALLBACKS.page,
-  pattern: "none",
-};
 
 export function YearbookFlipbook({
   entries,
@@ -215,7 +198,7 @@ function buildMobileViews(models: BookSpreadModel[], context: SpreadViewContext)
     }
 
     if (model.kind === "back") {
-      pages.push(<BackCover key={`mobile-back-${index}`} ownerName={context.ownerName} />);
+      pages.push(<BackCoverPage key={`mobile-back-${index}`} ownerName={context.ownerName} />);
       return;
     }
 
@@ -247,7 +230,7 @@ function renderSpread(model: BookSpreadModel, context: SpreadViewContext, key: s
   if (model.kind === "back") {
     return (
       <BookSpreadLayout key={key} variant="back">
-        <BackCover ownerName={context.ownerName} />
+        <BackCoverPage ownerName={context.ownerName} />
       </BookSpreadLayout>
     );
   }
@@ -272,39 +255,6 @@ function renderContentPage(left: ContentSpreadLeft, context: SpreadViewContext, 
   }
 
   return <EntryPage entry={left} key={key} />;
-}
-
-function CoverPage({
-  classLabel,
-  ownerName,
-  ownerUniversity,
-}: {
-  classLabel: string;
-  ownerName: string;
-  ownerUniversity?: string | null;
-}) {
-  return (
-    <BookPage styleConfig={coverStyleConfig}>
-      <div className="flex h-full flex-col items-center justify-center gap-4 px-12 text-center">
-        <p className="text-sm uppercase tracking-[0.3em] opacity-60">{classLabel}</p>
-        <h1 className="text-4xl font-bold leading-tight">{ownerName}</h1>
-        <p className="text-base opacity-70">{ownerUniversity ?? "Graduation Memories"}</p>
-        <div className="mt-8 h-px w-16 bg-current opacity-30" />
-        <p className="mt-2 text-xs opacity-40">Your Yearbook</p>
-      </div>
-    </BookPage>
-  );
-}
-
-function BackCover({ ownerName }: { ownerName: string }) {
-  return (
-    <BookPage styleConfig={backCoverStyleConfig}>
-      <div className="flex h-full flex-col items-center justify-center gap-3 px-12 text-center">
-        <p className="text-3xl font-bold">The End</p>
-        <p className="text-sm uppercase tracking-[0.24em] opacity-60">{ownerName}&apos;s yearbook</p>
-      </div>
-    </BookPage>
-  );
 }
 
 function EmptyPage({ shareUrl }: { shareUrl: string }) {

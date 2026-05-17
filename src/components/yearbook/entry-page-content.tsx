@@ -4,6 +4,8 @@ import type { YearbookEntry } from "@/lib/types/yearbook";
 
 type EntryPageContentProps = {
   entry: YearbookEntry;
+  /** When false, signed page images export without the author overlay footer. */
+  showSignedPageMetadata?: boolean;
 };
 
 function chromelessPdfUrl(url: string) {
@@ -11,7 +13,7 @@ function chromelessPdfUrl(url: string) {
   return url.includes("#") ? `${url}&${hash}` : `${url}#${hash}`;
 }
 
-export function EntryPageContent({ entry }: EntryPageContentProps) {
+export function EntryPageContent({ entry, showSignedPageMetadata = true }: EntryPageContentProps) {
   const meta = [entry.authorClass, entry.authorUniversity].filter(Boolean).join(" · ");
 
   if (entry.pageImageUrl) {
@@ -23,11 +25,13 @@ export function EntryPageContent({ entry }: EntryPageContentProps) {
           draggable={false}
           src={entry.pageImageUrl}
         />
-        <footer className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-white/90 to-transparent px-3 pb-2 pt-6 text-xs opacity-70">
-          <p className="font-semibold">{entry.authorName}</p>
-          {meta ? <p>{meta}</p> : null}
-          <p>Written on {format(entry.createdAt, "PPP")}</p>
-        </footer>
+        {showSignedPageMetadata ? (
+          <footer className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-white/90 to-transparent px-3 pb-2 pt-6 text-xs opacity-70">
+            <p className="font-semibold">{entry.authorName}</p>
+            {meta ? <p>{meta}</p> : null}
+            <p>Written on {format(entry.createdAt, "PPP")}</p>
+          </footer>
+        ) : null}
       </article>
     );
   }

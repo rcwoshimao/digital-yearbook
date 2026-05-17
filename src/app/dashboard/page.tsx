@@ -234,7 +234,14 @@ function YearbookDashboardCard({
         ownerName={ownerName}
         ownerUniversity={ownerUniversity}
         shareUrl={shareUrl}
-        toolbarEnd={<PdfExportButton entries={entries} ownerName={ownerName} />}
+        toolbarEnd={
+          <PdfExportButton
+            entries={entries}
+            ownerClass={ownerClass}
+            ownerName={ownerName}
+            ownerUniversity={ownerUniversity}
+          />
+        }
         toolbarStart={
           <p className="whitespace-nowrap text-sm font-bold text-yearbook-ink">
             {entries.length} {entryLabel}

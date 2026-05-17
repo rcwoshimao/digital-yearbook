@@ -7,10 +7,11 @@ import {
 type BookPageProps = {
   children: ReactNode;
   className?: string;
+  flat?: boolean;
   styleConfig: YearbookPageStyle;
 };
 
-export function BookPage({ children, className = "", styleConfig }: BookPageProps) {
+export function BookPage({ children, className = "", flat = false, styleConfig }: BookPageProps) {
   const patternClass =
     styleConfig.pattern === "none" ? "" : `yearbook-pattern-${styleConfig.pattern}`;
   const borderClass =
@@ -21,7 +22,9 @@ export function BookPage({ children, className = "", styleConfig }: BookPageProp
       className={`relative h-full w-full overflow-hidden rounded-sm ${patternClass} ${borderClass} ${className}`}
       style={{
         backgroundColor: styleConfig.background_color,
-        boxShadow: "0 4px 24px rgba(0, 0, 0, 0.12), 2px 0 8px rgba(0, 0, 0, 0.06)",
+        boxShadow: flat
+          ? undefined
+          : "0 4px 24px rgba(0, 0, 0, 0.12), 2px 0 8px rgba(0, 0, 0, 0.06)",
         color: styleConfig.ink_color,
         fontFamily: fontFamilyByStyle[styleConfig.font],
       }}
