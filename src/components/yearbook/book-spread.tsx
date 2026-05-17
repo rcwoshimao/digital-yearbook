@@ -5,7 +5,6 @@ import { defaultYearbookPageStyle } from "@/lib/yearbook/page-style";
 
 const blankPageStyle = {
   ...defaultYearbookPageStyle,
-  background_color: "#fffdf5",
   pattern: "none" as const,
 };
 

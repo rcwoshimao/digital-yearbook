@@ -16,6 +16,7 @@ type EntryRow = {
   content_text: string | null;
   image_urls: string[] | null;
   pdf_url: string | null;
+  page_image_url: string | null;
   style_config: unknown;
   created_at: string;
   is_visible_to_owner: boolean | null;
@@ -129,7 +130,7 @@ export default async function WriteHubPage() {
     supabase
       .from("entries")
       .select(
-        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, pdf_url, style_config, created_at, is_visible_to_owner",
+        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, pdf_url, page_image_url, style_config, created_at, is_visible_to_owner",
       )
       .eq("author_id", user.id)
       .order("created_at", { ascending: false })
@@ -182,7 +183,7 @@ export default async function WriteHubPage() {
 
 function WriteHubShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-6 py-8">
+    <main className="mx-auto min-h-screen max-w-5xl bg-yearbook-paper px-6 py-8">
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link className="text-sm font-semibold text-yearbook-accent" href="/dashboard">
           ← Back to My Yearbook
@@ -241,7 +242,8 @@ function mapEntryRow(row: EntryRow): YearbookEntry {
     authorClass: row.author_class,
     contentText: row.content_text ?? "",
     imageUrls: row.image_urls ?? [],
-    pdfUrl: null,
+    pdfUrl: row.pdf_url,
+    pageImageUrl: row.page_image_url,
     styleConfig: normalizeYearbookPageStyle(row.style_config),
     createdAt: new Date(row.created_at),
     isVisibleToOwner: row.is_visible_to_owner ?? true,

@@ -28,6 +28,7 @@ export type YearbookEntry = {
   contentText: string;
   imageUrls: string[];
   pdfUrl: string | null;
+  pageImageUrl: string | null;
   styleConfig: YearbookPageStyle;
   createdAt: Date;
   isVisibleToOwner: boolean;

@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Canvas, FabricImage, IText, Textbox, type FabricObject } from "fabric";
-import { jsPDF } from "jspdf";
-import { submitPdfEntry } from "@/app/yearbook/[yearbookId]/write/actions";
+import { submitCanvasEntry } from "@/app/yearbook/[yearbookId]/write/actions";
 import {
   Dialog,
   DialogContent,
@@ -17,14 +16,15 @@ import {
   getCanvasSelectionOptions,
 } from "@/lib/canvas/selection-overlay";
 import { isNextNavigationError } from "@/lib/next/is-redirect-error";
+import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
 
 configureCanvasSelectionOverlay();
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
-/** Rasterize the page above 72 DPI before embedding in the PDF (~216 DPI at A4 when 3). */
-const PDF_EXPORT_MULTIPLIER = 3;
-const PDF_EXPORT_JPEG_QUALITY = 0.9;
+/** Rasterize the canvas above 72 DPI (~216 DPI at A4 when 3). */
+const PAGE_EXPORT_MULTIPLIER = 3;
+const PAGE_EXPORT_JPEG_QUALITY = 0.9;
 const HISTORY_LIMIT = 30;
 const MOBILE_MAX_WIDTH = 767;
 
@@ -65,13 +65,13 @@ export function CanvasEntryEditor({
   const isRestoringRef = useRef(false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const backgroundInputRef = useRef<HTMLInputElement | null>(null);
-  const compiledPdfRef = useRef<Blob | null>(null);
+  const compiledPageImageRef = useRef<Blob | null>(null);
 
   const [isMobile, setIsMobile] = useState(false);
   const [selectedText, setSelectedText] = useState<EditableText | null>(null);
   const [fontFamily, setFontFamily] = useState<string>(FONT_OPTIONS[0].value);
   const [fontSize, setFontSize] = useState(20);
-  const [textColor, setTextColor] = useState("#27211b");
+  const [textColor, setTextColor] = useState<string>(YEARBOOK_THEME_FALLBACKS.ink);
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -133,7 +133,7 @@ export function CanvasEntryEditor({
     setSelectedText(active);
     setFontFamily(normalizeFontFamily(active.fontFamily));
     setFontSize(active.fontSize ?? 20);
-    setTextColor((active.fill as string) ?? "#27211b");
+    setTextColor((active.fill as string) ?? YEARBOOK_THEME_FALLBACKS.ink);
   }, []);
 
   const applyTextStyleUpdates = useCallback(
@@ -425,7 +425,7 @@ export function CanvasEntryEditor({
     setResetConfirmOpen(false);
   }
 
-  async function compilePdfPreview() {
+  async function compilePagePreview() {
     const canvas = fabricRef.current;
     if (!canvas) {
       return;
@@ -433,13 +433,11 @@ export function CanvasEntryEditor({
 
     const dataUrl = canvas.toDataURL({
       format: "jpeg",
-      quality: PDF_EXPORT_JPEG_QUALITY,
-      multiplier: PDF_EXPORT_MULTIPLIER,
+      quality: PAGE_EXPORT_JPEG_QUALITY,
+      multiplier: PAGE_EXPORT_MULTIPLIER,
     });
-    const pdf = new jsPDF({ unit: "px", format: [PAGE_WIDTH, PAGE_HEIGHT] });
-    pdf.addImage(dataUrl, "JPEG", 0, 0, PAGE_WIDTH, PAGE_HEIGHT, undefined, "NONE");
-    const blob = pdf.output("blob");
-    compiledPdfRef.current = blob;
+    const blob = dataUrlToBlob(dataUrl);
+    compiledPageImageRef.current = blob;
 
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -456,9 +454,9 @@ export function CanvasEntryEditor({
       return;
     }
 
-    const pdfBlob = compiledPdfRef.current;
-    if (!pdfBlob) {
-      setToastMessage("Compile your entry into a PDF before signing.");
+    const pageImageBlob = compiledPageImageRef.current;
+    if (!pageImageBlob) {
+      setToastMessage("Preview your page before signing.");
       return;
     }
 
@@ -469,8 +467,8 @@ export function CanvasEntryEditor({
       const formData = new FormData();
       formData.set("yearbookId", yearbookId);
       formData.set("ownerUsername", ownerUsername);
-      formData.set("pdf", new File([pdfBlob], "entry.pdf", { type: "application/pdf" }));
-      await submitPdfEntry(formData);
+      formData.set("pageImage", new File([pageImageBlob], "entry.jpg", { type: "image/jpeg" }));
+      await submitCanvasEntry(formData);
     } catch (error) {
       if (isNextNavigationError(error)) {
         throw error;
@@ -617,7 +615,7 @@ export function CanvasEntryEditor({
         onClick={() => setCompileDialogOpen(true)}
         type="button"
       >
-        Compile PDF?
+        Preview page
       </button>
 
       {toastMessage ? (
@@ -629,10 +627,10 @@ export function CanvasEntryEditor({
       <Dialog open={compileDialogOpen} onOpenChange={setCompileDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Compile your entry?</DialogTitle>
+            <DialogTitle>Preview your page?</DialogTitle>
             <DialogDescription>
-              Ready to preview your entry? We&apos;ll compile it into a PDF for you to review before
-              signing.
+              Ready to review your entry? We&apos;ll show you exactly how it will appear in the
+              yearbook before you sign.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-6 flex justify-end gap-3">
@@ -645,7 +643,7 @@ export function CanvasEntryEditor({
             </button>
             <button
               className="rounded-full bg-yearbook-ink px-4 py-2 text-sm font-semibold text-white"
-              onClick={() => void compilePdfPreview()}
+              onClick={() => void compilePagePreview()}
               type="button"
             >
               Confirm
@@ -658,10 +656,16 @@ export function CanvasEntryEditor({
         <DialogContent className="flex h-[90vh] w-[min(96vw,56rem)] max-h-[90vh] flex-col">
           <DialogHeader>
             <DialogTitle>Preview your page</DialogTitle>
-            <DialogDescription>Review the compiled PDF before you sign.</DialogDescription>
+            <DialogDescription>Review your page before you sign.</DialogDescription>
           </DialogHeader>
           {previewUrl ? (
-            <iframe className="mt-4 min-h-0 flex-1 rounded-xl border border-stone-200" src={previewUrl} title="Entry preview" />
+            <div className="mt-4 flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-white">
+              <img
+                alt="Entry preview"
+                className="max-h-full max-w-full object-contain"
+                src={previewUrl}
+              />
+            </div>
           ) : null}
           <div className="mt-4 flex flex-wrap justify-end gap-3">
             <button
@@ -708,7 +712,7 @@ export function CanvasEntryEditor({
               onClick={() => void signYearbook()}
               type="button"
             >
-              {isSampleMode ? "Sample mode" : isSubmitting ? "Uploading PDF…" : "Sign — I'm sure"}
+              {isSampleMode ? "Sample mode" : isSubmitting ? "Signing…" : "Sign — I'm sure"}
             </button>
           </div>
         </DialogContent>
@@ -901,6 +905,19 @@ function Toolbar({
       ) : null}
     </div>
   );
+}
+
+function dataUrlToBlob(dataUrl: string) {
+  const [header, base64] = dataUrl.split(",");
+  const mime = header?.match(/:(.*?);/)?.[1] ?? "image/jpeg";
+  const binary = atob(base64 ?? "");
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([bytes], { type: mime });
 }
 
 function isImageObject(object: FabricObject) {

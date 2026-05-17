@@ -5,32 +5,58 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeUsername } from "@/lib/username";
 
-const MAX_PDF_SIZE = 10 * 1024 * 1024;
+const MAX_PAGE_IMAGE_SIZE = 10 * 1024 * 1024;
 
 function writeUrl(ownerUsername: string, type: "entry_error" | "entry_message", message: string) {
   const params = new URLSearchParams({ [type]: message });
   return `/write/${normalizeUsername(ownerUsername)}?${params.toString()}`;
 }
 
-export async function submitPdfEntry(formData: FormData) {
+async function uploadEntryPageImage(
+  supabase: ReturnType<typeof createClient>,
+  objectPath: string,
+  bytes: Buffer,
+  contentType: string,
+) {
+  let uploadError = (
+    await supabase.storage.from("entry-pdfs").upload(objectPath, bytes, {
+      contentType,
+      upsert: false,
+    })
+  ).error;
+
+  if (uploadError?.message.toLowerCase().includes("already exists")) {
+    await supabase.storage.from("entry-pdfs").remove([objectPath]);
+    uploadError = (
+      await supabase.storage.from("entry-pdfs").upload(objectPath, bytes, {
+        contentType,
+        upsert: false,
+      })
+    ).error;
+  }
+
+  return uploadError;
+}
+
+export async function submitCanvasEntry(formData: FormData) {
   const yearbookId = String(formData.get("yearbookId") ?? "");
   const ownerUsername = normalizeUsername(String(formData.get("ownerUsername") ?? ""));
-  const pdfFile = formData.get("pdf");
+  const pageImageFile = formData.get("pageImage");
 
   if (!yearbookId || !ownerUsername) {
     redirect("/write");
   }
 
-  if (!(pdfFile instanceof File) || pdfFile.size === 0) {
-    redirect(writeUrl(ownerUsername, "entry_error", "A PDF file is required to sign this yearbook."));
+  if (!(pageImageFile instanceof File) || pageImageFile.size === 0) {
+    redirect(writeUrl(ownerUsername, "entry_error", "A page image is required to sign this yearbook."));
   }
 
-  if (pdfFile.type !== "application/pdf") {
-    redirect(writeUrl(ownerUsername, "entry_error", "Only PDF uploads are allowed."));
+  if (!pageImageFile.type.startsWith("image/")) {
+    redirect(writeUrl(ownerUsername, "entry_error", "Only image uploads are allowed."));
   }
 
-  if (pdfFile.size > MAX_PDF_SIZE) {
-    redirect(writeUrl(ownerUsername, "entry_error", "The compiled PDF must be 10MB or smaller."));
+  if (pageImageFile.size > MAX_PAGE_IMAGE_SIZE) {
+    redirect(writeUrl(ownerUsername, "entry_error", "The page image must be 10MB or smaller."));
   }
 
   const supabase = createClient();
@@ -57,35 +83,22 @@ export async function submitPdfEntry(formData: FormData) {
   }
 
   const entryId = randomUUID();
-  const objectPath = `${yearbookId}/${user.id}.pdf`;
+  const pageImageObjectPath = `${yearbookId}/${user.id}.jpg`;
+  const pageImageBytes = Buffer.from(await pageImageFile.arrayBuffer());
 
-  const pdfBytes = Buffer.from(await pdfFile.arrayBuffer());
-
-  // Do not use upsert: true — hosted Supabase often lacks the storage UPDATE policy
-  // from migration 0007, and upsert/update then fails with an RLS error.
-  let uploadError = (
-    await supabase.storage.from("entry-pdfs").upload(objectPath, pdfBytes, {
-      contentType: "application/pdf",
-      upsert: false,
-    })
-  ).error;
-
-  if (uploadError?.message.toLowerCase().includes("already exists")) {
-    await supabase.storage.from("entry-pdfs").remove([objectPath]);
-    uploadError = (
-      await supabase.storage.from("entry-pdfs").upload(objectPath, pdfBytes, {
-        contentType: "application/pdf",
-        upsert: false,
-      })
-    ).error;
-  }
+  const uploadError = await uploadEntryPageImage(
+    supabase,
+    pageImageObjectPath,
+    pageImageBytes,
+    pageImageFile.type,
+  );
 
   if (uploadError) {
     const lower = uploadError.message.toLowerCase();
     const message = lower.includes("bucket not found")
       ? "Storage bucket entry-pdfs is missing. Run supabase/setup_entry_pdfs_bucket.sql in the Supabase SQL editor, then try again."
       : lower.includes("row-level security")
-        ? "Could not upload your PDF. Run supabase/setup_entry_pdfs_bucket.sql in the Supabase SQL editor, then try again."
+        ? "Could not upload your page. Run supabase/migrations/0008_add_entry_page_image_url.sql in the Supabase SQL editor, then try again."
         : uploadError.message;
 
     redirect(writeUrl(ownerUsername, "entry_error", message));
@@ -100,11 +113,12 @@ export async function submitPdfEntry(formData: FormData) {
     author_class: profile.graduation_class,
     content_text: null,
     image_urls: [],
-    pdf_url: objectPath,
+    pdf_url: null,
+    page_image_url: pageImageObjectPath,
   });
 
   if (error) {
-    await supabase.storage.from("entry-pdfs").remove([objectPath]);
+    await supabase.storage.from("entry-pdfs").remove([pageImageObjectPath]);
 
     const message = error.message.toLowerCase().includes("row-level security")
       ? "Could not save your entry. Run supabase/setup_entry_pdfs_bucket.sql in the Supabase SQL editor, then try again."
@@ -115,3 +129,6 @@ export async function submitPdfEntry(formData: FormData) {
 
   redirect("/dashboard?signed=1");
 }
+
+/** @deprecated Use submitCanvasEntry */
+export const submitPdfEntry = submitCanvasEntry;

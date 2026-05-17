@@ -1,3 +1,5 @@
+import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
+
 export type YearbookPagePattern = "none" | "lined" | "dotted" | "grid";
 export type YearbookPageFont = "serif" | "handwritten" | "mono";
 export type YearbookPageBorder = "none" | "classic" | "double" | "corner";
@@ -11,7 +13,7 @@ export type YearbookPageStyle = {
 };
 
 export const defaultYearbookPageStyle: YearbookPageStyle = {
-  background_color: "#fffdf5",
+  background_color: YEARBOOK_THEME_FALLBACKS.page,
   pattern: "none",
   font: "serif",
   ink_color: "#1a1a1a",
@@ -19,7 +21,7 @@ export const defaultYearbookPageStyle: YearbookPageStyle = {
 };
 
 export const backgroundOptions = [
-  { label: "Cream", value: "#fffdf5" },
+  { label: "Cream", value: YEARBOOK_THEME_FALLBACKS.page },
   { label: "Blush", value: "#fdecea" },
   { label: "Mint", value: "#e8f5f0" },
   { label: "Sky", value: "#e8f0fd" },

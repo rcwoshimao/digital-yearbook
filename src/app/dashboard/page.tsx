@@ -25,6 +25,7 @@ type EntryRow = {
   content_text: string | null;
   image_urls: string[] | null;
   pdf_url: string | null;
+  page_image_url: string | null;
   style_config: unknown;
   created_at: string;
   is_visible_to_owner: boolean | null;
@@ -116,7 +117,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     supabase
       .from("entries")
       .select(
-        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, pdf_url, style_config, created_at, is_visible_to_owner",
+        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, pdf_url, page_image_url, style_config, created_at, is_visible_to_owner",
       )
       .eq("yearbook_id", yearbook.id)
       .order("created_at", { ascending: false })
@@ -139,7 +140,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     return data?.flatMap((item) => (item.signedUrl ? [item.signedUrl] : [])) ?? [];
   }
 
-  async function getSignedPdfUrl(path: string | null) {
+  async function getSignedEntryAssetUrl(path: string | null) {
     if (!path) {
       return null;
     }
@@ -153,7 +154,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     (receivedRows ?? []).map(async (row) =>
       mapEntryRow(row, {
         imageUrls: await getSignedImageUrls(row.image_urls ?? []),
-        pdfUrl: await getSignedPdfUrl(row.pdf_url),
+        pdfUrl: await getSignedEntryAssetUrl(row.pdf_url),
+        pageImageUrl: await getSignedEntryAssetUrl(row.page_image_url),
       }),
     ),
   );
@@ -245,7 +247,7 @@ function YearbookDashboardCard({
 
 function mapEntryRow(
   row: EntryRow,
-  signedAssets: { imageUrls: string[]; pdfUrl: string | null },
+  signedAssets: { imageUrls: string[]; pdfUrl: string | null; pageImageUrl: string | null },
 ): YearbookEntry {
   return {
     id: row.id,
@@ -257,6 +259,7 @@ function mapEntryRow(
     contentText: row.content_text ?? "",
     imageUrls: signedAssets.imageUrls,
     pdfUrl: signedAssets.pdfUrl,
+    pageImageUrl: signedAssets.pageImageUrl,
     styleConfig: normalizeYearbookPageStyle(row.style_config),
     createdAt: new Date(row.created_at),
     isVisibleToOwner: row.is_visible_to_owner ?? true,

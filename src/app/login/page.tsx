@@ -12,7 +12,7 @@ type LoginPageProps = {
 export default function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className="relative min-h-screen overflow-hidden px-6 py-12">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,#fbd38d,transparent_32%),radial-gradient(circle_at_bottom_right,#f7b2ad,transparent_28%),linear-gradient(135deg,#fff8ed,#f9ead7)]" />
+      <div className="yearbook-page-bg absolute inset-0 -z-10" />
       <div className="absolute left-10 top-12 -z-10 h-24 w-24 rounded-full bg-white/40 blur-xl" />
       <div className="absolute bottom-16 right-16 -z-10 h-32 w-32 rounded-full bg-yearbook-accent/20 blur-2xl" />
 

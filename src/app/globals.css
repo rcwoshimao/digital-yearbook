@@ -4,6 +4,14 @@
 
 :root {
   color-scheme: light;
+
+  --yearbook-paper: #f5e9d5;
+  --yearbook-paper-deep: #b8b0a4;
+  --yearbook-ink: #27211b;
+  --yearbook-accent: #8f5f35;
+  --yearbook-page: #fffdf5;
+  --yearbook-glow-warm: #fbd38d;
+  --yearbook-glow-rose: #f7b2ad;
 }
 
 * {
@@ -12,8 +20,15 @@
 
 body {
   margin: 0;
-  background: #fff8ed;
-  color: #27211b;
+  background: var(--yearbook-paper);
+  color: var(--yearbook-ink);
+}
+
+.yearbook-page-bg {
+  background:
+    radial-gradient(circle at top left, var(--yearbook-glow-warm) 0%, transparent 32%),
+    radial-gradient(circle at bottom right, var(--yearbook-glow-rose) 0%, transparent 28%),
+    linear-gradient(135deg, var(--yearbook-paper), var(--yearbook-paper-deep));
 }
 
 a {

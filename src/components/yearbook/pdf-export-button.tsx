@@ -5,6 +5,7 @@ import { jsPDF } from "jspdf";
 import { useRef, useState } from "react";
 import { EntryCard } from "@/components/yearbook/entry-card";
 import type { YearbookEntry } from "@/lib/types/yearbook";
+import { readYearbookCssVar, YEARBOOK_CSS_VARS, YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
 
 type PdfExportButtonProps = {
   entries: YearbookEntry[];
@@ -33,7 +34,7 @@ export function PdfExportButton({ entries, ownerName }: PdfExportButtonProps) {
       for (let index = 0; index < pages.length; index += 1) {
         const page = pages[index];
         const canvas = await html2canvas(page, {
-          backgroundColor: "#fff8ed",
+          backgroundColor: readYearbookCssVar(YEARBOOK_CSS_VARS.paper, YEARBOOK_THEME_FALLBACKS.paper),
           scale: 2,
           useCORS: true,
         });

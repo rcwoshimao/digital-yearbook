@@ -1,31 +1,45 @@
 /* eslint-disable @next/next/no-img-element */
 import { format } from "date-fns";
-import { EntryPdfPage } from "@/components/yearbook/entry-pdf-page-lazy";
 import type { YearbookEntry } from "@/lib/types/yearbook";
 
 type EntryPageContentProps = {
   entry: YearbookEntry;
 };
 
+function chromelessPdfUrl(url: string) {
+  const hash = "toolbar=0&navpanes=0&scrollbar=0&view=Fit";
+  return url.includes("#") ? `${url}&${hash}` : `${url}#${hash}`;
+}
+
 export function EntryPageContent({ entry }: EntryPageContentProps) {
   const meta = [entry.authorClass, entry.authorUniversity].filter(Boolean).join(" · ");
 
+  if (entry.pageImageUrl) {
+    return (
+      <article className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white">
+        <img
+          alt={`${entry.authorName}'s yearbook page`}
+          className="h-full w-full object-contain"
+          draggable={false}
+          src={entry.pageImageUrl}
+        />
+        <footer className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-white/90 to-transparent px-3 pb-2 pt-6 text-xs opacity-70">
+          <p className="font-semibold">{entry.authorName}</p>
+          {meta ? <p>{meta}</p> : null}
+          <p>Written on {format(entry.createdAt, "PPP")}</p>
+        </footer>
+      </article>
+    );
+  }
+
   if (entry.pdfUrl) {
     return (
-      <article className="flex h-full min-h-0 flex-col overflow-hidden p-3">
-        <header className="shrink-0 border-b border-current/20 pb-2">
-          <h3 className="text-lg font-bold leading-tight">{entry.authorName}</h3>
-          {meta ? <p className="text-xs opacity-70">{meta}</p> : null}
-        </header>
-        <div className="min-h-0 flex-1 overflow-hidden pt-2">
-          <EntryPdfPage
-            title={`${entry.authorName}'s yearbook page`}
-            url={entry.pdfUrl}
-          />
-        </div>
-        <footer className="mt-2 shrink-0 text-xs opacity-60">
-          Written on {format(entry.createdAt, "PPP")}
-        </footer>
+      <article className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
+        <iframe
+          className="h-full w-full border-0"
+          src={chromelessPdfUrl(entry.pdfUrl)}
+          title={`${entry.authorName}'s yearbook page`}
+        />
       </article>
     );
   }

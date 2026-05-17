@@ -10,9 +10,11 @@ const config: Config = {
     extend: {
       colors: {
         yearbook: {
-          paper: "#fff8ed",
-          ink: "#27211b",
-          accent: "#8f5f35",
+          paper: "var(--yearbook-paper)",
+          "paper-deep": "var(--yearbook-paper-deep)",
+          ink: "var(--yearbook-ink)",
+          accent: "var(--yearbook-accent)",
+          page: "var(--yearbook-page)",
         },
       },
     },

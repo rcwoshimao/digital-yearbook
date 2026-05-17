@@ -77,7 +77,7 @@ create policy "Authorized users can read entry pdfs"
       select 1
       from entries
       join yearbooks on yearbooks.id = entries.yearbook_id
-      where entries.pdf_url = name
+      where (entries.pdf_url = name or entries.page_image_url = name)
         and (entries.author_id = auth.uid() or yearbooks.owner_id = auth.uid())
     )
   );

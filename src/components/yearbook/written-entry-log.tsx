@@ -26,7 +26,7 @@ export function WrittenEntryLog({ entries, recipientNamesByYearbookId = {} }: Wr
             <p className="text-sm text-stone-600">Signed on {format(entry.createdAt, "PPP")}</p>
           </div>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-800">
-            {entry.pdfUrl ? "Signed canvas page (PDF entry)" : entry.contentText}
+            {entry.pageImageUrl || entry.pdfUrl ? "Signed canvas page" : entry.contentText}
           </p>
         </div>
       ))}

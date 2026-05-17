@@ -20,6 +20,7 @@ import {
   normalizeYearbookPageStyle,
   type YearbookPageStyle,
 } from "@/lib/yearbook/page-style";
+import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
 
 type YearbookFlipbookProps = {
   entries: YearbookEntry[];
@@ -37,7 +38,7 @@ const coverStyleConfig: YearbookPageStyle = {
   background_color: "#1a2e4a",
   border: "none",
   font: "serif",
-  ink_color: "#fffdf5",
+  ink_color: YEARBOOK_THEME_FALLBACKS.page,
   pattern: "none",
 };
 
@@ -45,7 +46,7 @@ const backCoverStyleConfig: YearbookPageStyle = {
   background_color: "#1a2e4a",
   border: "none",
   font: "serif",
-  ink_color: "#fffdf5",
+  ink_color: YEARBOOK_THEME_FALLBACKS.page,
   pattern: "none",
 };
 
