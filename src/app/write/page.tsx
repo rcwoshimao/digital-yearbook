@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { WrittenEntryLog } from "@/components/yearbook/written-entry-log";
-import { sampleEntries, sampleUsers, sampleYearbooks } from "@/lib/dev/sample-yearbook";
-import { hasSupabaseEnv, isSampleDataMode } from "@/lib/supabase/env";
+import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import type { YearbookEntry } from "@/lib/types/yearbook";
 import { normalizeYearbookPageStyle } from "@/lib/yearbook/page-style";
@@ -16,6 +15,7 @@ type EntryRow = {
   author_class: string | null;
   content_text: string | null;
   image_urls: string[] | null;
+  pdf_url: string | null;
   style_config: unknown;
   created_at: string;
   is_visible_to_owner: boolean | null;
@@ -43,46 +43,6 @@ type WritableYearbookTarget = {
 };
 
 export default async function WriteHubPage() {
-  if (isSampleDataMode) {
-    const authoredEntries = sampleEntries.filter((entry) => entry.authorId === sampleUsers.user1.id);
-    const writableTargets = [
-      {
-        ownerName: sampleUsers.user2.displayName,
-        ownerUsername: sampleUsers.user2.username,
-        yearbookId: sampleYearbooks.user2.id,
-      },
-    ];
-    const recipientNamesByYearbookId = {
-      [sampleYearbooks.user2.id]: sampleUsers.user2.displayName,
-    };
-
-    return (
-      <WriteHubShell>
-        <section className="rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yearbook-accent">
-            Write Entries
-          </p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight">Sign a Yearbook</h1>
-          <p className="mt-3 text-stone-700">
-            Sample mode is logged in as User 1. Open User 2&apos;s yearbook to view the sample
-            entry User 1 already wrote.
-          </p>
-          <WritableYearbookList targets={writableTargets} />
-        </section>
-
-        <section className="rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
-          <h2 className="text-xl font-bold">Entries I&apos;ve Written</h2>
-          <p className="mt-2 text-sm text-stone-600">
-            This sample list shows the single entry User 1 wrote to User 2.
-          </p>
-          <WrittenEntryLog
-            entries={authoredEntries}
-            recipientNamesByYearbookId={recipientNamesByYearbookId}
-          />
-        </section>
-      </WriteHubShell>
-    );
-  }
 
   if (!hasSupabaseEnv) {
     return (
@@ -169,7 +129,7 @@ export default async function WriteHubPage() {
     supabase
       .from("entries")
       .select(
-        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, style_config, created_at, is_visible_to_owner",
+        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, pdf_url, style_config, created_at, is_visible_to_owner",
       )
       .eq("author_id", user.id)
       .order("created_at", { ascending: false })
@@ -281,6 +241,7 @@ function mapEntryRow(row: EntryRow): YearbookEntry {
     authorClass: row.author_class,
     contentText: row.content_text ?? "",
     imageUrls: row.image_urls ?? [],
+    pdfUrl: null,
     styleConfig: normalizeYearbookPageStyle(row.style_config),
     createdAt: new Date(row.created_at),
     isVisibleToOwner: row.is_visible_to_owner ?? true,

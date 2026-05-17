@@ -4,6 +4,7 @@ export type Profile = {
   id: string;
   displayName: string;
   username: string;
+  email: string;
   university: string | null;
   graduationClass: string | null;
   avatarUrl: string | null;
@@ -26,6 +27,7 @@ export type YearbookEntry = {
   authorClass: string | null;
   contentText: string;
   imageUrls: string[];
+  pdfUrl: string | null;
   styleConfig: YearbookPageStyle;
   createdAt: Date;
   isVisibleToOwner: boolean;

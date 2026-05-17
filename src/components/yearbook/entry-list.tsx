@@ -18,7 +18,9 @@ export function EntryList({ entries }: EntryListProps) {
       {entries.map((entry) => (
         <div key={entry.id} className="rounded-2xl border border-stone-200 bg-yearbook-paper p-4">
           <p className="font-semibold">{entry.authorName}</p>
-          <p className="mt-1 line-clamp-2 text-sm text-stone-600">{entry.contentText}</p>
+          <p className="mt-1 line-clamp-2 text-sm text-stone-600">
+            {entry.pdfUrl ? "Signed canvas page (PDF)" : entry.contentText}
+          </p>
         </div>
       ))}
     </div>

@@ -2,8 +2,7 @@ import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ProfileSettingsForm } from "@/components/profile/profile-settings-form";
 import { ShareControls } from "@/components/yearbook/share-controls";
-import { sampleInvites, sampleUsers, sampleYearbooks } from "@/lib/dev/sample-yearbook";
-import { hasSupabaseEnv, isSampleDataMode } from "@/lib/supabase/env";
+import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import type { YearbookInvite } from "@/lib/types/yearbook";
 import { isUuid, normalizeUsername } from "@/lib/username";
@@ -38,47 +37,6 @@ type YearbookRow = {
 export default async function ProfilePage({ params, searchParams }: ProfilePageProps) {
   const slug = normalizeUsername(params.username);
 
-  if (isSampleDataMode) {
-    if (slug !== sampleUsers.user1.username) {
-      redirect(`/profile/${sampleUsers.user1.username}`);
-    }
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const yearbook = sampleYearbooks.user1;
-
-    return (
-      <DashboardShell profileUsername={sampleUsers.user1.username} userName={sampleUsers.user1.displayName}>
-        {searchParams.profile_error ? (
-          <p className="mb-6 rounded-2xl bg-red-50 p-4 text-sm text-red-700">{searchParams.profile_error}</p>
-        ) : null}
-        {searchParams.profile_message ? (
-          <p className="mb-6 rounded-2xl bg-green-50 p-4 text-sm text-green-700">
-            {searchParams.profile_message}
-          </p>
-        ) : null}
-        <div className="space-y-8">
-          <ProfileSettingsForm
-            email={sampleUsers.user1.email}
-            emailConfirmed
-            isSampleMode
-            returnUsername={sampleUsers.user1.username}
-            userId={sampleUsers.user1.id}
-            username={sampleUsers.user1.username}
-          />
-          <ShareControls
-            appUrl={appUrl}
-            invites={sampleInvites}
-            isSampleMode
-            ownerUsername={sampleUsers.user1.username}
-            returnPath={`/profile/${sampleUsers.user1.username}`}
-            shareMode={yearbook.shareMode}
-            yearbookId={yearbook.id}
-          />
-        </div>
-      </DashboardShell>
-    );
-  }
-
   if (!hasSupabaseEnv) {
     redirect("/login");
   }
@@ -107,9 +65,9 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
   const [{ data: profile }, { data: yearbook }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, display_name, username")
+      .select("id, display_name, username, email")
       .eq("id", user.id)
-      .maybeSingle<{ id: string; display_name: string; username: string }>(),
+      .maybeSingle<{ id: string; display_name: string; username: string; email: string | null }>(),
     supabase
       .from("yearbooks")
       .select("id, share_mode")
@@ -126,8 +84,9 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
           </p>
           <h1 className="mt-2 text-3xl font-bold">Your account is still being set up</h1>
           <p className="mt-3 max-w-2xl text-stone-700">
-            We could not find a profile record for this account yet. Try signing out and back in, or
-            run the Supabase seed migration for local development.
+            We could not find a profile record for this account yet. Run{" "}
+            <code className="rounded bg-stone-100 px-1">supabase/dev_seed.sql</code> in the SQL
+            editor, or sign up through the app.
           </p>
         </div>
       </DashboardShell>
@@ -184,7 +143,7 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
   }));
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const email = user.email ?? "";
+  const email = profile.email ?? user.email ?? "";
   const emailConfirmed = Boolean(user.email_confirmed_at);
   const pendingEmail = user.new_email ?? null;
 

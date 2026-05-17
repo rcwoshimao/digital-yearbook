@@ -110,6 +110,10 @@ export async function updateEmail(formData: FormData) {
 
   const { error } = await supabase.auth.updateUser({ email });
 
+  if (!error) {
+    await supabase.from("profiles").update({ email }).eq("id", userId);
+  }
+
   if (error) {
     const message = error.message.toLowerCase();
 

@@ -10,6 +10,10 @@ export function isValidUsername(value: string) {
   return USERNAME_PATTERN.test(value);
 }
 
+export function isEmailLike(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export function isUuid(value: string) {
   return UUID_PATTERN.test(value);
 }

@@ -25,7 +25,7 @@ export function ProfileSettingsForm({
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-yearbook-accent">Account</p>
         <h1 className="mt-2 text-3xl font-bold">Your profile</h1>
         <p className="mt-2 max-w-2xl text-stone-700">
-          Update how you appear to friends and manage the email used to sign in.
+          Update how you appear to friends. Sign in with your email or @{username}.
         </p>
       </div>
 

@@ -3,8 +3,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PdfExportButton } from "@/components/yearbook/pdf-export-button";
 import { ShareControls } from "@/components/yearbook/share-controls";
 import { YearbookFlipbook } from "@/components/yearbook/yearbook-flipbook";
-import { sampleEntries, sampleInvites, sampleUsers, sampleYearbooks } from "@/lib/dev/sample-yearbook";
-import { hasSupabaseEnv, isSampleDataMode } from "@/lib/supabase/env";
+import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import type { YearbookEntry, YearbookInvite } from "@/lib/types/yearbook";
 import { normalizeYearbookPageStyle } from "@/lib/yearbook/page-style";
@@ -12,6 +11,7 @@ import { normalizeYearbookPageStyle } from "@/lib/yearbook/page-style";
 type DashboardPageProps = {
   searchParams: {
     dashboard_error?: string;
+    signed?: string;
   };
 };
 
@@ -24,6 +24,7 @@ type EntryRow = {
   author_class: string | null;
   content_text: string | null;
   image_urls: string[] | null;
+  pdf_url: string | null;
   style_config: unknown;
   created_at: string;
   is_visible_to_owner: boolean | null;
@@ -49,37 +50,6 @@ type YearbookRow = {
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  if (isSampleDataMode) {
-    const ownerName = sampleUsers.user1.displayName;
-    const yearbook = sampleYearbooks.user1;
-    const receivedEntries = sampleEntries.filter((entry) => entry.yearbookId === yearbook.id);
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
-    return (
-      <DashboardShell profileUsername={sampleUsers.user1.username} userName={ownerName}>
-        <SampleModeBanner />
-        <section className="space-y-6">
-          <YearbookDashboardCard
-            entries={receivedEntries}
-            ownerClass={sampleUsers.user1.graduationClass}
-            ownerName={ownerName}
-            ownerUniversity={sampleUsers.user1.university}
-            shareUrl={`${appUrl}/write/${sampleUsers.user1.username}`}
-          />
-          <div className="rounded-[2rem] bg-white/70 p-2 shadow-sm ring-1 ring-stone-200">
-            <ShareControls
-              appUrl={appUrl}
-              invites={sampleInvites}
-              isSampleMode
-              ownerUsername={sampleUsers.user1.username}
-              shareMode={yearbook.shareMode}
-              yearbookId={yearbook.id}
-            />
-          </div>
-        </section>
-      </DashboardShell>
-    );
-  }
 
   if (!hasSupabaseEnv) {
     return (
@@ -146,7 +116,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     supabase
       .from("entries")
       .select(
-        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, style_config, created_at, is_visible_to_owner",
+        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, pdf_url, style_config, created_at, is_visible_to_owner",
       )
       .eq("yearbook_id", yearbook.id)
       .order("created_at", { ascending: false })
@@ -169,8 +139,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     return data?.flatMap((item) => (item.signedUrl ? [item.signedUrl] : [])) ?? [];
   }
 
+  async function getSignedPdfUrl(path: string | null) {
+    if (!path) {
+      return null;
+    }
+
+    const { data } = await supabase.storage.from("entry-pdfs").createSignedUrl(path, 60 * 60);
+
+    return data?.signedUrl ?? null;
+  }
+
   const receivedEntries = await Promise.all(
-    (receivedRows ?? []).map(async (row) => mapEntryRow(row, await getSignedImageUrls(row.image_urls ?? []))),
+    (receivedRows ?? []).map(async (row) =>
+      mapEntryRow(row, {
+        imageUrls: await getSignedImageUrls(row.image_urls ?? []),
+        pdfUrl: await getSignedPdfUrl(row.pdf_url),
+      }),
+    ),
   );
   const invitedUserIds = Array.from(new Set((inviteRows ?? []).map((invite) => invite.invited_user_id)));
   const { data: invitedProfiles } =
@@ -190,6 +175,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <DashboardShell profileUsername={profile?.username} userName={ownerName}>
+      {searchParams.signed ? (
+        <p className="mb-6 rounded-2xl bg-green-50 p-4 text-sm font-semibold text-green-800">
+          You&apos;ve signed the yearbook!
+        </p>
+      ) : null}
       {searchParams.dashboard_error ? (
         <p className="mb-6 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
           {searchParams.dashboard_error}
@@ -253,7 +243,10 @@ function YearbookDashboardCard({
   );
 }
 
-function mapEntryRow(row: EntryRow, signedImageUrls: string[]): YearbookEntry {
+function mapEntryRow(
+  row: EntryRow,
+  signedAssets: { imageUrls: string[]; pdfUrl: string | null },
+): YearbookEntry {
   return {
     id: row.id,
     yearbookId: row.yearbook_id,
@@ -262,7 +255,8 @@ function mapEntryRow(row: EntryRow, signedImageUrls: string[]): YearbookEntry {
     authorUniversity: row.author_university,
     authorClass: row.author_class,
     contentText: row.content_text ?? "",
-    imageUrls: signedImageUrls,
+    imageUrls: signedAssets.imageUrls,
+    pdfUrl: signedAssets.pdfUrl,
     styleConfig: normalizeYearbookPageStyle(row.style_config),
     createdAt: new Date(row.created_at),
     isVisibleToOwner: row.is_visible_to_owner ?? true,
@@ -279,10 +273,3 @@ function mapInviteRow(row: InviteRow, invitedUsernamesById: Map<string, string>)
   };
 }
 
-function SampleModeBanner() {
-  return (
-    <p className="mb-6 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
-      Sample data mode is on. Forms that would change Supabase data are disabled.
-    </p>
-  );
-}

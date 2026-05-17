@@ -53,8 +53,18 @@ export function AuthForm({ authError, authMessage, isConfigured }: AuthFormProps
             <h2 className="text-2xl font-bold">Welcome back</h2>
             <p className="mt-1 text-sm text-stone-600">Open your yearbook and keep writing.</p>
           </div>
-          <AuthField label="Email" name="email" type="email" />
+          <AuthField
+            label="Email or username"
+            name="login"
+            placeholder="you@school.edu or user1"
+            type="text"
+          />
           <AuthField label="Password" name="password" type="password" />
+          <p className="text-xs text-stone-600">
+            Dev test accounts: <span className="font-semibold">user1</span> /{" "}
+            <span className="font-semibold">user2</span> with password{" "}
+            <span className="font-mono">------</span>
+          </p>
           <button
             className="w-full rounded-full bg-yearbook-ink px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!isConfigured}

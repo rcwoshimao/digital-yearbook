@@ -2,13 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { WriteEntryForm } from "@/components/forms/write-entry-form";
-import {
-  getSampleUserByUsername,
-  getSampleYearbookByUsername,
-  sampleEntries,
-  sampleUsers,
-} from "@/lib/dev/sample-yearbook";
-import { hasSupabaseEnv, isSampleDataMode } from "@/lib/supabase/env";
+import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid, normalizeUsername } from "@/lib/username";
 
@@ -25,70 +19,6 @@ type WriteEntryPageProps = {
 export default async function WriteEntryPage({ params, searchParams }: WriteEntryPageProps) {
   const slug = normalizeUsername(params.username);
 
-  if (isSampleDataMode) {
-    const recipient = getSampleUserByUsername(slug);
-    const yearbook = getSampleYearbookByUsername(slug);
-
-    if (!yearbook || !recipient) {
-      return (
-        <WritePageShell ownerUsername={slug}>
-          <div className="rounded-3xl bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
-            <h2 className="text-xl font-bold">Sample yearbook unavailable</h2>
-            <p className="mt-2 text-stone-700">
-              Sample mode knows @{sampleUsers.user1.username} and @{sampleUsers.user2.username}{" "}
-              only. Open a sample link from the write hub.
-            </p>
-          </div>
-        </WritePageShell>
-      );
-    }
-
-    const existingEntry = sampleEntries.find(
-      (entry) => entry.yearbookId === yearbook.id && entry.authorId === sampleUsers.user1.id,
-    );
-
-    return (
-      <WritePageShell ownerUsername={recipient.username} recipientName={recipient.displayName}>
-        <p className="mb-6 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
-          Sample data mode is on. You are viewing this as User 1, and entry submission is
-          read-only.
-        </p>
-        <section className="mb-6 rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
-          <p className="text-sm font-semibold text-stone-700">Writing to</p>
-          <h2 className="mt-1 text-2xl font-bold">{recipient.displayName}</h2>
-          <p className="text-sm text-stone-600">
-            {[recipient.university, recipient.graduationClass].filter(Boolean).join(" · ")}
-          </p>
-        </section>
-        {existingEntry ? (
-          <div className="rounded-[2rem] bg-yearbook-paper p-6 text-center shadow-sm ring-1 ring-stone-200">
-            <h2 className="text-2xl font-bold">
-              You&apos;ve already signed {recipient.displayName}&apos;s yearbook.
-            </h2>
-            <p className="mt-2 text-stone-700">
-              Signed on {format(existingEntry.createdAt, "PPP")}. Each yearbook can only receive
-              one note from you.
-            </p>
-            <Link
-              className="mt-5 inline-flex rounded-full bg-yearbook-ink px-5 py-3 text-sm font-semibold text-white"
-              href="/write"
-            >
-              Back to Sign Yearbooks
-            </Link>
-          </div>
-        ) : (
-          <WriteEntryForm
-            authorClass={sampleUsers.user1.graduationClass}
-            authorName={sampleUsers.user1.displayName}
-            authorUniversity={sampleUsers.user1.university}
-            isSampleMode
-            ownerUsername={recipient.username}
-            yearbookId={yearbook.id}
-          />
-        )}
-      </WritePageShell>
-    );
-  }
 
   if (!hasSupabaseEnv) {
     return (
@@ -250,6 +180,7 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
           authorName={authorProfile.display_name}
           authorUniversity={authorProfile.university}
           ownerUsername={ownerProfile.username}
+          submitError={searchParams.entry_error}
           yearbookId={yearbook.id}
         />
       )}
@@ -278,12 +209,12 @@ function WritePageShell({ children, ownerUsername, recipientName }: WritePageShe
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yearbook-accent">
           Sign a Yearbook
         </p>
-        <h1 className="mt-2 text-3xl font-bold">Write a permanent entry</h1>
+        <h1 className="mt-2 text-3xl font-bold">Design your yearbook page</h1>
         <p className="mt-3 text-stone-700">
           {recipientName
-            ? `You are writing to ${recipientName}.`
+            ? `You are signing ${recipientName}'s yearbook on the canvas below.`
             : "You are opening a shared yearbook link."}{" "}
-          Entries cannot be edited after submission.
+          Your compiled PDF is permanent after you sign.
         </p>
         <p className="mt-2 text-sm text-stone-500">
           Yearbook link: <span className="font-semibold text-yearbook-ink">@{ownerUsername}</span>
