@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Canvas, FabricImage, IText, type FabricObject } from "fabric";
+import { Canvas, FabricImage, IText, Textbox, type FabricObject } from "fabric";
 import { jsPDF } from "jspdf";
 import { submitPdfEntry } from "@/app/yearbook/[yearbookId]/write/actions";
 import {
@@ -19,12 +19,16 @@ const PAGE_HEIGHT = 842;
 const HISTORY_LIMIT = 30;
 const MOBILE_MAX_WIDTH = 767;
 
+const DEFAULT_TEXT_WIDTH = 320;
+
 const FONT_OPTIONS = [
   { label: "Serif", value: "Georgia, 'Times New Roman', serif" },
   { label: "Sans", value: "Arial, Helvetica, sans-serif" },
   { label: "Mono", value: "'Courier New', Courier, monospace" },
-  { label: "Handwritten", value: "var(--font-caveat), cursive" },
+  { label: "Handwritten", value: "Caveat, cursive" },
 ] as const;
+
+type EditableText = Textbox | IText;
 
 type CanvasEntryEditorProps = {
   authorClass: string | null;
@@ -55,7 +59,7 @@ export function CanvasEntryEditor({
   const compiledPdfRef = useRef<Blob | null>(null);
 
   const [isMobile, setIsMobile] = useState(false);
-  const [selectedText, setSelectedText] = useState<IText | null>(null);
+  const [selectedText, setSelectedText] = useState<EditableText | null>(null);
   const [fontFamily, setFontFamily] = useState<string>(FONT_OPTIONS[0].value);
   const [fontSize, setFontSize] = useState(20);
   const [textColor, setTextColor] = useState("#27211b");
@@ -116,6 +120,27 @@ export function CanvasEntryEditor({
     [updateHistoryButtons],
   );
 
+  const syncTextToolbar = useCallback((active: EditableText) => {
+    setSelectedText(active);
+    setFontFamily(normalizeFontFamily(active.fontFamily));
+    setFontSize(active.fontSize ?? 20);
+    setTextColor((active.fill as string) ?? "#27211b");
+  }, []);
+
+  const applyTextStyleUpdates = useCallback(
+    (updates: { fontFamily?: string; fontSize?: number; fill?: string }) => {
+      const canvas = fabricRef.current;
+      if (!canvas || !selectedText) {
+        return;
+      }
+
+      applyTextStylesToObject(selectedText, updates);
+      canvas.requestRenderAll();
+      pushHistory(canvas);
+    },
+    [pushHistory, selectedText],
+  );
+
   const bindCanvasEvents = useCallback(
     (canvas: Canvas) => {
       const record = () => pushHistory(canvas);
@@ -124,33 +149,31 @@ export function CanvasEntryEditor({
       canvas.on("object:added", record);
       canvas.on("object:removed", record);
 
-      canvas.on("selection:created", () => {
+      canvas.on("object:scaling", () => {
         const active = canvas.getActiveObject();
-        if (active instanceof IText) {
-          setSelectedText(active);
-          setFontFamily(active.fontFamily ?? FONT_OPTIONS[0].value);
-          setFontSize(active.fontSize ?? 20);
-          setTextColor((active.fill as string) ?? "#27211b");
-        } else {
-          setSelectedText(null);
+        if (active instanceof Textbox) {
+          resizeTextboxByScaling(active);
+          canvas.requestRenderAll();
+        } else if (active instanceof IText) {
+          resetLegacyTextScale(active);
+          canvas.requestRenderAll();
         }
       });
 
-      canvas.on("selection:updated", () => {
+      const handleSelection = () => {
         const active = canvas.getActiveObject();
-        if (active instanceof IText) {
-          setSelectedText(active);
-          setFontFamily(active.fontFamily ?? FONT_OPTIONS[0].value);
-          setFontSize(active.fontSize ?? 20);
-          setTextColor((active.fill as string) ?? "#27211b");
+        if (isEditableText(active)) {
+          syncTextToolbar(active);
         } else {
           setSelectedText(null);
         }
-      });
+      };
 
+      canvas.on("selection:created", handleSelection);
+      canvas.on("selection:updated", handleSelection);
       canvas.on("selection:cleared", () => setSelectedText(null));
     },
-    [pushHistory],
+    [pushHistory, syncTextToolbar],
   );
 
   useEffect(() => {
@@ -292,32 +315,20 @@ export function CanvasEntryEditor({
       return;
     }
 
-    const text = new IText("Double-click to edit", {
+    const text = new Textbox("Double-click to edit", {
       left: 48,
       top: 48,
+      width: DEFAULT_TEXT_WIDTH,
       fontSize,
       fill: textColor,
       fontFamily,
+      splitByGrapheme: false,
+      lockScalingY: true,
     });
 
     canvas.add(text);
     canvas.setActiveObject(text);
     canvas.renderAll();
-  }
-
-  function applyTextStyles() {
-    const canvas = fabricRef.current;
-    if (!canvas || !selectedText) {
-      return;
-    }
-
-    selectedText.set({
-      fontFamily,
-      fontSize,
-      fill: textColor,
-    });
-    canvas.renderAll();
-    pushHistory(canvas);
   }
 
   async function addImageFromFile(file: File) {
@@ -505,7 +516,18 @@ export function CanvasEntryEditor({
         isSampleMode={isSampleMode}
         onAddImage={() => imageInputRef.current?.click()}
         onAddText={addText}
-        onApplyTextStyles={applyTextStyles}
+        onFontFamilyChange={(value) => {
+          setFontFamily(value);
+          applyTextStyleUpdates({ fontFamily: value });
+        }}
+        onFontSizeChange={(value) => {
+          setFontSize(value);
+          applyTextStyleUpdates({ fontSize: value });
+        }}
+        onTextColorChange={(value) => {
+          setTextColor(value);
+          applyTextStyleUpdates({ fill: value });
+        }}
         onBackgroundColorChange={updateBackgroundColor}
         onBackgroundImage={() => backgroundInputRef.current?.click()}
         onClearBackgroundImage={clearBackgroundImage}
@@ -528,9 +550,6 @@ export function CanvasEntryEditor({
           void restoreHistory(canvas, historyIndexRef.current - 1);
         }}
         selectedText={selectedText}
-        setFontFamily={setFontFamily}
-        setFontSize={setFontSize}
-        setTextColor={setTextColor}
         textColor={textColor}
       />
 
@@ -718,18 +737,17 @@ function Toolbar({
   isSampleMode,
   onAddImage,
   onAddText,
-  onApplyTextStyles,
   onBackgroundColorChange,
   onBackgroundImage,
   onClearBackgroundImage,
+  onFontFamilyChange,
+  onFontSizeChange,
   onRedo,
   onReset,
   onSaveDraft,
+  onTextColorChange,
   onUndo,
   selectedText,
-  setFontFamily,
-  setFontSize,
-  setTextColor,
   textColor,
 }: {
   backgroundColor: string;
@@ -740,18 +758,17 @@ function Toolbar({
   isSampleMode: boolean;
   onAddImage: () => void;
   onAddText: () => void;
-  onApplyTextStyles: () => void;
   onBackgroundColorChange: (color: string) => void;
   onBackgroundImage: () => void;
   onClearBackgroundImage: () => void;
+  onFontFamilyChange: (value: string) => void;
+  onFontSizeChange: (value: number) => void;
   onRedo: () => void;
   onReset: () => void;
   onSaveDraft: () => void;
+  onTextColorChange: (value: string) => void;
   onUndo: () => void;
-  selectedText: IText | null;
-  setFontFamily: (value: string) => void;
-  setFontSize: (value: number) => void;
-  setTextColor: (value: string) => void;
+  selectedText: EditableText | null;
   textColor: string;
 }) {
   return (
@@ -836,7 +853,7 @@ function Toolbar({
             Font
             <select
               className="ml-2 rounded-lg border border-stone-300 px-2 py-1 text-xs"
-              onChange={(event) => setFontFamily(event.target.value)}
+              onChange={(event) => onFontFamilyChange(event.target.value)}
               value={fontFamily}
             >
               {FONT_OPTIONS.map((option) => (
@@ -852,7 +869,7 @@ function Toolbar({
               className="ml-2 w-16 rounded-lg border border-stone-300 px-2 py-1 text-xs"
               max={96}
               min={10}
-              onChange={(event) => setFontSize(Number(event.target.value))}
+              onChange={(event) => onFontSizeChange(Number(event.target.value))}
               type="number"
               value={fontSize}
             />
@@ -861,18 +878,11 @@ function Toolbar({
             Color
             <input
               className="h-8 w-10 cursor-pointer rounded border border-stone-300"
-              onChange={(event) => setTextColor(event.target.value)}
+              onChange={(event) => onTextColorChange(event.target.value)}
               type="color"
               value={textColor}
             />
           </label>
-          <button
-            className="rounded-full bg-yearbook-ink px-3 py-1.5 text-xs font-semibold text-white"
-            onClick={onApplyTextStyles}
-            type="button"
-          >
-            Apply to selection
-          </button>
         </div>
       ) : null}
     </div>
@@ -881,6 +891,73 @@ function Toolbar({
 
 function isImageObject(object: FabricObject) {
   return object.type === "image" || object.type === "Image";
+}
+
+function isEditableText(object: FabricObject | null | undefined): object is EditableText {
+  return object instanceof Textbox || object instanceof IText;
+}
+
+function normalizeFontFamily(value: string | undefined) {
+  if (!value) {
+    return FONT_OPTIONS[0].value;
+  }
+
+  const lowered = value.toLowerCase();
+  if (lowered.includes("caveat") || lowered.includes("--font-caveat")) {
+    return FONT_OPTIONS[3].value;
+  }
+
+  for (const option of FONT_OPTIONS) {
+    const primary = option.value
+      .split(",")[0]
+      .replace(/['"]/g, "")
+      .trim()
+      .toLowerCase();
+    if (lowered.includes(primary)) {
+      return option.value;
+    }
+  }
+
+  return value;
+}
+
+function applyTextStylesToObject(
+  text: EditableText,
+  styles: { fontFamily?: string; fontSize?: number; fill?: string },
+) {
+  text.set(styles);
+  text.initDimensions();
+  text.setCoords();
+}
+
+function resizeTextboxByScaling(target: Textbox) {
+  if (target.scaleX === 1 && target.scaleY === 1) {
+    return;
+  }
+
+  const newWidth = Math.max((target.width ?? 0) * target.scaleX, target.minWidth ?? 20);
+  target.set({
+    width: newWidth,
+    scaleX: 1,
+    scaleY: 1,
+  });
+  target.initDimensions();
+  target.setCoords();
+}
+
+function resetLegacyTextScale(target: IText) {
+  if (target.scaleX === 1 && target.scaleY === 1) {
+    return;
+  }
+
+  const scale = (target.scaleX + target.scaleY) / 2;
+  target.set({
+    fontSize: Math.max(8, Math.round((target.fontSize ?? 20) * scale)),
+    scaleX: 1,
+    scaleY: 1,
+  });
+  target.initDimensions();
+  target.setCoords();
 }
 
 function readFileAsDataUrl(file: File) {
