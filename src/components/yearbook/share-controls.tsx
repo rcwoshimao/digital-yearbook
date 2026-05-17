@@ -8,6 +8,8 @@ type ShareControlsProps = {
   appUrl: string;
   invites: YearbookInvite[];
   isSampleMode?: boolean;
+  ownerUsername: string;
+  returnPath?: string;
   shareMode: "link" | "invite_only";
   yearbookId: string;
 };
@@ -16,11 +18,13 @@ export function ShareControls({
   appUrl,
   invites,
   isSampleMode = false,
+  ownerUsername,
+  returnPath = "/dashboard",
   shareMode,
   yearbookId,
 }: ShareControlsProps) {
   const [copyMessage, setCopyMessage] = useState("");
-  const shareUrl = `${appUrl}/write/${yearbookId}`;
+  const shareUrl = `${appUrl}/write/${ownerUsername}`;
 
   async function copyLink() {
     await navigator.clipboard.writeText(shareUrl);
@@ -70,6 +74,7 @@ export function ShareControls({
           }
         }}
       >
+        <input name="returnPath" type="hidden" value={returnPath} />
         <input name="yearbookId" type="hidden" value={yearbookId} />
         <label className="block text-sm font-semibold text-stone-700">
           Invite by Username
@@ -102,6 +107,7 @@ export function ShareControls({
                 }
               }}
             >
+              <input name="returnPath" type="hidden" value={returnPath} />
               <input name="yearbookId" type="hidden" value={yearbookId} />
               <input name="invitedUserId" type="hidden" value={invite.invitedUserId} />
               <span className="truncate text-sm font-semibold">@{invite.invitedUsername}</span>
@@ -122,6 +128,7 @@ export function ShareControls({
           }
         }}
       >
+        <input name="returnPath" type="hidden" value={returnPath} />
         <input name="yearbookId" type="hidden" value={yearbookId} />
         <p className="text-sm font-semibold text-stone-700">Share mode</p>
         <div className="mt-3 grid gap-2">

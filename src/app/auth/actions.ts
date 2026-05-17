@@ -3,14 +3,11 @@
 import { redirect } from "next/navigation";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { isValidUsername, normalizeUsername } from "@/lib/username";
 
 function encodedMessage(type: "auth_error" | "auth_message", message: string) {
   const params = new URLSearchParams({ [type]: message });
   return `/login?${params.toString()}`;
-}
-
-function normalizeUsername(value: string) {
-  return value.trim().replace(/^@+/, "").toLowerCase();
 }
 
 export async function signIn(formData: FormData) {
@@ -40,7 +37,7 @@ export async function signUp(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
 
-  if (!/^[a-z0-9_]{3,30}$/.test(username)) {
+  if (!isValidUsername(username)) {
     redirect(
       encodedMessage(
         "auth_error",

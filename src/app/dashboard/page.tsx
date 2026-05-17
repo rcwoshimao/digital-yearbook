@@ -56,7 +56,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
     return (
-      <DashboardShell userName={ownerName}>
+      <DashboardShell profileUsername={sampleUsers.user1.username} userName={ownerName}>
         <SampleModeBanner />
         <section className="space-y-6">
           <YearbookDashboardCard
@@ -64,13 +64,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             ownerClass={sampleUsers.user1.graduationClass}
             ownerName={ownerName}
             ownerUniversity={sampleUsers.user1.university}
-            shareUrl={`${appUrl}/write/${yearbook.id}`}
+            shareUrl={`${appUrl}/write/${sampleUsers.user1.username}`}
           />
           <div className="rounded-[2rem] bg-white/70 p-2 shadow-sm ring-1 ring-stone-200">
             <ShareControls
               appUrl={appUrl}
               invites={sampleInvites}
               isSampleMode
+              ownerUsername={sampleUsers.user1.username}
               shareMode={yearbook.shareMode}
               yearbookId={yearbook.id}
             />
@@ -109,10 +110,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const [{ data: profile }, { data: yearbook, error: yearbookError }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("display_name, university, graduation_class")
+      .select("display_name, username, university, graduation_class")
       .eq("id", user.id)
       .maybeSingle<{
         display_name: string;
+        username: string;
         university: string | null;
         graduation_class: string | null;
       }>(),
@@ -125,7 +127,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   if (yearbookError || !yearbook) {
     return (
-      <DashboardShell>
+      <DashboardShell profileUsername={profile?.username} userName={profile?.display_name}>
         <div className="rounded-[2rem] bg-white/80 p-8 shadow-sm ring-1 ring-stone-200">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yearbook-accent">
             Supabase Setup Needed
@@ -187,7 +189,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const ownerName = profile?.display_name ?? "you";
 
   return (
-    <DashboardShell userName={ownerName}>
+    <DashboardShell profileUsername={profile?.username} userName={ownerName}>
       {searchParams.dashboard_error ? (
         <p className="mb-6 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
           {searchParams.dashboard_error}
@@ -199,12 +201,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           ownerClass={profile?.graduation_class}
           ownerName={ownerName}
           ownerUniversity={profile?.university}
-          shareUrl={`${appUrl}/write/${yearbook.id}`}
+          shareUrl={`${appUrl}/write/${profile?.username ?? ""}`}
         />
         <div className="rounded-[2rem] bg-white/70 p-2 shadow-sm ring-1 ring-stone-200">
           <ShareControls
             appUrl={appUrl}
             invites={invites}
+            ownerUsername={profile?.username ?? ""}
             shareMode={yearbook.share_mode}
             yearbookId={yearbook.id}
           />

@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { signOut } from "@/app/auth/actions";
+import { UserMenu } from "@/components/layout/user-menu";
 
 type DashboardShellProps = {
   children: React.ReactNode;
+  profileUsername?: string;
   userName?: string;
 };
 
-export function DashboardShell({ children, userName }: DashboardShellProps) {
-  const initial = userName?.slice(0, 1).toUpperCase() ?? "Y";
-
+export function DashboardShell({ children, profileUsername, userName }: DashboardShellProps) {
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#fff8ed,#f7ead9)] px-6 py-8">
       <div className="mx-auto max-w-7xl">
@@ -23,17 +23,7 @@ export function DashboardShell({ children, userName }: DashboardShellProps) {
             <Link className="rounded-full px-4 py-2 hover:bg-white/70" href="/write">
               Sign Yearbooks
             </Link>
-            <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2 shadow-sm">
-              <span className="grid h-7 w-7 place-items-center rounded-full bg-yearbook-accent text-xs font-bold text-white">
-                {initial}
-              </span>
-              <span>{userName ?? "Graduate"}</span>
-            </div>
-            <form action={signOut}>
-              <button className="rounded-full px-3 py-2 font-medium text-stone-700 hover:bg-white/70">
-                Sign out
-              </button>
-            </form>
+            <UserMenu profileUsername={profileUsername} signOutAction={signOut} userName={userName} />
           </nav>
         </header>
         {children}

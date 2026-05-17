@@ -3,13 +3,35 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeUsername } from "@/lib/username";
 
-function dashboardError(message: string): never {
-  redirect(`/dashboard?dashboard_error=${encodeURIComponent(message)}`);
+function ownerRedirect(formData: FormData, message: string): never {
+  const returnPath = String(formData.get("returnPath") ?? "/dashboard");
+  const safePath = returnPath.startsWith("/profile/") || returnPath === "/dashboard" ? returnPath : "/dashboard";
+  const param = safePath.startsWith("/profile/") ? "profile_error" : "dashboard_error";
+  const separator = safePath.includes("?") ? "&" : "?";
+  redirect(`${safePath}${separator}${param}=${encodeURIComponent(message)}`);
 }
 
-function normalizeUsername(value: string) {
-  return value.trim().replace(/^@+/, "").toLowerCase();
+async function revalidateOwnerViews(supabase: ReturnType<typeof createClient>) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle<{ username: string }>();
+
+    revalidatePath("/dashboard");
+    if (profile?.username) {
+      revalidatePath(`/profile/${profile.username}`);
+    }
+  } else {
+    revalidatePath("/dashboard");
+  }
 }
 
 export async function updateShareMode(formData: FormData) {
@@ -17,7 +39,7 @@ export async function updateShareMode(formData: FormData) {
   const shareMode = String(formData.get("shareMode") ?? "");
 
   if (!yearbookId || !["link", "invite_only"].includes(shareMode)) {
-    dashboardError("Invalid share mode request.");
+    ownerRedirect(formData, "Invalid share mode request.");
   }
 
   const supabase = createClient();
@@ -27,10 +49,10 @@ export async function updateShareMode(formData: FormData) {
     .eq("id", yearbookId);
 
   if (error) {
-    dashboardError(error.message);
+    ownerRedirect(formData, error.message);
   }
 
-  revalidatePath("/dashboard");
+  await revalidateOwnerViews(supabase);
 }
 
 export async function addInvite(formData: FormData) {
@@ -38,11 +60,11 @@ export async function addInvite(formData: FormData) {
   const username = normalizeUsername(String(formData.get("username") ?? ""));
 
   if (!yearbookId || !username) {
-    dashboardError("Enter a username to invite.");
+    ownerRedirect(formData, "Enter a username to invite.");
   }
 
   if (!/^[a-z0-9_]{3,30}$/.test(username)) {
-    dashboardError("Usernames can only contain lowercase letters, numbers, and underscores.");
+    ownerRedirect(formData, "Usernames can only contain lowercase letters, numbers, and underscores.");
   }
 
   const supabase = createClient();
@@ -61,21 +83,21 @@ export async function addInvite(formData: FormData) {
     .maybeSingle<{ id: string }>();
 
   if (lookupError) {
-    dashboardError(lookupError.message);
+    ownerRedirect(formData, lookupError.message);
   }
 
   if (!invitedProfile) {
-    dashboardError("No user found with that username.");
+    ownerRedirect(formData, "No user found with that username.");
   }
 
   const invitedUserId = invitedProfile?.id;
 
   if (!invitedUserId) {
-    dashboardError("No user found with that username.");
+    ownerRedirect(formData, "No user found with that username.");
   }
 
   if (invitedUserId === user.id) {
-    dashboardError("You cannot invite yourself to your own yearbook.");
+    ownerRedirect(formData, "You cannot invite yourself to your own yearbook.");
   }
 
   const { error } = await supabase.from("yearbook_invites").insert({
@@ -84,10 +106,10 @@ export async function addInvite(formData: FormData) {
   });
 
   if (error) {
-    dashboardError(error.message);
+    ownerRedirect(formData, error.message);
   }
 
-  revalidatePath("/dashboard");
+  await revalidateOwnerViews(supabase);
 }
 
 export async function revokeInvite(formData: FormData) {
@@ -95,7 +117,7 @@ export async function revokeInvite(formData: FormData) {
   const invitedUserId = String(formData.get("invitedUserId") ?? "");
 
   if (!yearbookId || !invitedUserId) {
-    dashboardError("Invalid invite revoke request.");
+    ownerRedirect(formData, "Invalid invite revoke request.");
   }
 
   const supabase = createClient();
@@ -106,8 +128,8 @@ export async function revokeInvite(formData: FormData) {
     .eq("invited_user_id", invitedUserId);
 
   if (error) {
-    dashboardError(error.message);
+    ownerRedirect(formData, error.message);
   }
 
-  revalidatePath("/dashboard");
+  await revalidateOwnerViews(supabase);
 }

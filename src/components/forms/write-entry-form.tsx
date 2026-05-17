@@ -20,6 +20,7 @@ type WriteEntryFormProps = {
   authorName: string;
   authorUniversity: string | null;
   isSampleMode?: boolean;
+  ownerUsername: string;
   yearbookId: string;
 };
 
@@ -28,6 +29,7 @@ export function WriteEntryForm({
   authorName,
   authorUniversity,
   isSampleMode = false,
+  ownerUsername,
   yearbookId,
 }: WriteEntryFormProps) {
   const [contentText, setContentText] = useState("");
@@ -73,6 +75,7 @@ export function WriteEntryForm({
           Sample mode is read-only, so this form will not submit to Supabase.
         </p>
       ) : null}
+      <input name="ownerUsername" type="hidden" value={ownerUsername} />
       <input name="yearbookId" type="hidden" value={yearbookId} />
       <input name="styleConfig" type="hidden" value={JSON.stringify(styleConfig)} />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">

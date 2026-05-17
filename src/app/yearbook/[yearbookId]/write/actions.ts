@@ -4,17 +4,19 @@ import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeYearbookPageStyle } from "@/lib/yearbook/page-style";
+import { normalizeUsername } from "@/lib/username";
 
 const MAX_IMAGES = 5;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
-function writeUrl(yearbookId: string, type: "entry_error" | "entry_message", message: string) {
+function writeUrl(ownerUsername: string, type: "entry_error" | "entry_message", message: string) {
   const params = new URLSearchParams({ [type]: message });
-  return `/write/${yearbookId}?${params.toString()}`;
+  return `/write/${normalizeUsername(ownerUsername)}?${params.toString()}`;
 }
 
 export async function createEntry(formData: FormData) {
   const yearbookId = String(formData.get("yearbookId") ?? "");
+  const ownerUsername = normalizeUsername(String(formData.get("ownerUsername") ?? ""));
   const contentText = String(formData.get("contentText") ?? "").trim();
   const styleConfigValue = String(formData.get("styleConfig") ?? "");
   const styleConfig = normalizeYearbookPageStyle(parseStyleConfig(styleConfigValue));
@@ -22,25 +24,25 @@ export async function createEntry(formData: FormData) {
     .getAll("images")
     .filter((value): value is File => value instanceof File && value.size > 0);
 
-  if (!yearbookId) {
+  if (!yearbookId || !ownerUsername) {
     redirect("/write");
   }
 
   if (!contentText && imageFiles.length === 0) {
-    redirect(writeUrl(yearbookId, "entry_error", "Add a message or at least one image."));
+    redirect(writeUrl(ownerUsername, "entry_error", "Add a message or at least one image."));
   }
 
   if (imageFiles.length > MAX_IMAGES) {
-    redirect(writeUrl(yearbookId, "entry_error", "Upload a maximum of 5 images."));
+    redirect(writeUrl(ownerUsername, "entry_error", "Upload a maximum of 5 images."));
   }
 
   for (const file of imageFiles) {
     if (!file.type.startsWith("image/")) {
-      redirect(writeUrl(yearbookId, "entry_error", "Only image uploads are allowed."));
+      redirect(writeUrl(ownerUsername, "entry_error", "Only image uploads are allowed."));
     }
 
     if (file.size > MAX_IMAGE_SIZE) {
-      redirect(writeUrl(yearbookId, "entry_error", "Each image must be 5MB or smaller."));
+      redirect(writeUrl(ownerUsername, "entry_error", "Each image must be 5MB or smaller."));
     }
   }
 
@@ -64,7 +66,7 @@ export async function createEntry(formData: FormData) {
     }>();
 
   if (profileError || !profile) {
-    redirect(writeUrl(yearbookId, "entry_error", "Complete your profile before writing an entry."));
+    redirect(writeUrl(ownerUsername, "entry_error", "Complete your profile before writing an entry."));
   }
 
   const entryId = randomUUID();
@@ -85,7 +87,7 @@ export async function createEntry(formData: FormData) {
         await supabase.storage.from("entry-images").remove(uploadedPaths);
       }
 
-      redirect(writeUrl(yearbookId, "entry_error", uploadError.message));
+      redirect(writeUrl(ownerUsername, "entry_error", uploadError.message));
     }
 
     uploadedPaths.push(objectPath);
@@ -108,10 +110,10 @@ export async function createEntry(formData: FormData) {
       await supabase.storage.from("entry-images").remove(uploadedPaths);
     }
 
-    redirect(writeUrl(yearbookId, "entry_error", error.message));
+    redirect(writeUrl(ownerUsername, "entry_error", error.message));
   }
 
-  redirect(writeUrl(yearbookId, "entry_message", "Entry submitted. It is now locked."));
+  redirect(writeUrl(ownerUsername, "entry_message", "Entry submitted. It is now locked."));
 }
 
 function parseStyleConfig(value: string) {

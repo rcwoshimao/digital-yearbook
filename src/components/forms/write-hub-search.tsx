@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { parseWriteLinkSlug } from "@/lib/username";
 
 export function WriteHubSearch() {
   const router = useRouter();
@@ -9,16 +10,14 @@ export function WriteHubSearch() {
   const [message, setMessage] = useState("");
 
   function openSharedLink() {
-    const trimmed = sharedLink.trim();
-    const match = trimmed.match(/\/write\/([^/?#]+)/) ?? trimmed.match(/^([0-9a-f-]{20,})$/i);
-    const yearbookId = match?.[1];
+    const username = parseWriteLinkSlug(sharedLink);
 
-    if (!yearbookId) {
-      setMessage("Paste a valid /write/[yearbook_id] link.");
+    if (!username) {
+      setMessage("Paste a valid link like yourapp.com/write/username or enter @username.");
       return;
     }
 
-    router.push(`/write/${yearbookId}`);
+    router.push(`/write/${username}`);
   }
 
   return (
@@ -29,7 +28,7 @@ export function WriteHubSearch() {
           <input
             className="flex-1 rounded-full border border-stone-300 bg-white px-4 py-3 text-sm"
             disabled
-            placeholder="@username or user ID"
+            placeholder="@username"
           />
           <button
             className="rounded-full bg-stone-300 px-5 py-3 text-sm font-semibold text-stone-600"
@@ -54,7 +53,7 @@ export function WriteHubSearch() {
           <input
             className="mt-2 w-full rounded-full border border-stone-300 bg-white px-4 py-3 text-sm"
             onChange={(event) => setSharedLink(event.target.value)}
-            placeholder="https://yourapp.com/write/yearbook-id"
+            placeholder="https://yourapp.com/write/username"
             value={sharedLink}
           />
         </label>

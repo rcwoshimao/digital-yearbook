@@ -191,6 +191,39 @@ export const sampleInvites: YearbookInvite[] = [
   },
 ];
 
+export function getSampleUserByUsername(username: string) {
+  const normalized = username.toLowerCase();
+
+  if (normalized === sampleUsers.user1.username) {
+    return sampleUsers.user1;
+  }
+
+  if (normalized === sampleUsers.user2.username) {
+    return sampleUsers.user2;
+  }
+
+  return null;
+}
+
+export function getSampleYearbookByUsername(username: string) {
+  const user = getSampleUserByUsername(username);
+
+  if (!user) {
+    return null;
+  }
+
+  if (user.id === sampleUsers.user1.id) {
+    return sampleYearbooks.user1;
+  }
+
+  if (user.id === sampleUsers.user2.id) {
+    return sampleYearbooks.user2;
+  }
+
+  return null;
+}
+
+/** @deprecated Legacy yearbook-id URLs redirect via the write page. */
 export function getSampleRecipient(yearbookId: string) {
   if (yearbookId === sampleYearbooks.user1.id) {
     return sampleUsers.user1;
@@ -203,6 +236,7 @@ export function getSampleRecipient(yearbookId: string) {
   return null;
 }
 
+/** @deprecated Legacy yearbook-id URLs redirect via the write page. */
 export function getSampleYearbook(yearbookId: string) {
   if (yearbookId === sampleYearbooks.user1.id) {
     return sampleYearbooks.user1;

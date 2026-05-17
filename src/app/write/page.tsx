@@ -33,10 +33,12 @@ type YearbookAccessRow = {
 type ProfileRow = {
   id: string;
   display_name: string;
+  username: string;
 };
 
 type WritableYearbookTarget = {
   ownerName: string;
+  ownerUsername: string;
   yearbookId: string;
 };
 
@@ -46,6 +48,7 @@ export default async function WriteHubPage() {
     const writableTargets = [
       {
         ownerName: sampleUsers.user2.displayName,
+        ownerUsername: sampleUsers.user2.username,
         yearbookId: sampleYearbooks.user2.id,
       },
     ];
@@ -116,13 +119,16 @@ export default async function WriteHubPage() {
       ownerIds.length > 0
         ? await supabase
             .from("profiles")
-            .select("id, display_name")
+            .select("id, display_name, username")
             .in("id", ownerIds)
             .returns<ProfileRow[]>()
         : { data: [] };
 
     const namesByOwnerId = new Map(
       (profileRows ?? []).map((profile) => [profile.id, profile.display_name]),
+    );
+    const usernamesByOwnerId = new Map(
+      (profileRows ?? []).map((profile) => [profile.id, profile.username]),
     );
     const yearbooksById = new Map((yearbookRows ?? []).map((yearbook) => [yearbook.id, yearbook]));
     const recipientNamesByYearbookId = Object.fromEntries(
@@ -138,9 +144,16 @@ export default async function WriteHubPage() {
         return [];
       }
 
+      const ownerUsername = usernamesByOwnerId.get(yearbook.owner_id);
+
+      if (!ownerUsername) {
+        return [];
+      }
+
       return [
         {
           ownerName: namesByOwnerId.get(yearbook.owner_id) ?? "this graduate",
+          ownerUsername,
           yearbookId,
         },
       ];
@@ -248,7 +261,7 @@ function WritableYearbookList({ targets }: { targets: WritableYearbookTarget[] }
       {targets.map((target) => (
         <Link
           className="block p-4 text-sm font-semibold text-yearbook-ink transition hover:bg-white/70"
-          href={`/write/${target.yearbookId}`}
+          href={`/write/${target.ownerUsername}`}
           key={target.yearbookId}
         >
           Sign {target.ownerName}&apos;s yearbook →
