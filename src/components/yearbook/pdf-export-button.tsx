@@ -7,9 +7,10 @@ import { EntryPageContent } from "@/components/yearbook/entry-page-content";
 import { BOOK_HEIGHT, BOOK_WIDTH } from "@/components/yearbook/flipbook-viewer";
 import { BackCoverPage, CoverPage } from "@/components/yearbook/yearbook-cover-page";
 import type { YearbookEntry } from "@/lib/types/yearbook";
+import { coverStyleConfig } from "@/lib/yearbook/cover-styles";
 import { normalizeYearbookPageStyle } from "@/lib/yearbook/page-style";
 import {
-  addRasterToPdfPage,
+  appendRasterToPdf,
   captureElementToPng,
   fetchImageForPdf,
 } from "@/lib/yearbook/pdf-export";
@@ -44,48 +45,10 @@ export function PdfExportButton({
     setIsExporting(true);
 
     try {
-      const pdf = new jsPDF({ format: "a4", unit: "mm" });
-      let isFirstPage = true;
-
-      const appendDomPage = async (selector: string) => {
-        const element = root.querySelector<HTMLElement>(selector);
-        if (!element) {
-          return;
-        }
-
-        if (!isFirstPage) {
-          pdf.addPage();
-        }
-
-        isFirstPage = false;
-
-        const captured = await captureElementToPng(element, BOOK_WIDTH, BOOK_HEIGHT);
-        addRasterToPdfPage(pdf, captured);
-      };
-
-      const appendImagePage = async (url: string) => {
-        if (!isFirstPage) {
-          pdf.addPage();
-        }
-
-        isFirstPage = false;
-
-        const loaded = await fetchImageForPdf(url);
-        addRasterToPdfPage(pdf, loaded);
-      };
-
-      await appendDomPage('[data-pdf-page="cover"]');
-
-      for (const entry of entries) {
-        if (entry.pageImageUrl) {
-          await appendImagePage(entry.pageImageUrl);
-          continue;
-        }
-
-        await appendDomPage(`[data-pdf-page="entry-${entry.id}"]`);
+      const pdf = await buildYearbookPdf(root, entries);
+      if (!pdf) {
+        return;
       }
-
-      await appendDomPage('[data-pdf-page="back"]');
 
       pdf.save(`yearbook-${slugify(ownerName)}-${new Date().getFullYear()}.pdf`);
     } finally {
@@ -108,7 +71,7 @@ export function PdfExportButton({
         className="pointer-events-none absolute left-[-10000px] top-0"
         ref={exportRef}
       >
-        <div data-pdf-page="cover" style={exportPageStyle}>
+        <div className="h-full w-full overflow-hidden" data-pdf-page="cover" style={exportPageStyle}>
           <CoverPage
             classLabel={classLabel}
             flat
@@ -117,18 +80,65 @@ export function PdfExportButton({
           />
         </div>
         {domExportEntries.map((entry) => (
-          <div data-pdf-page={`entry-${entry.id}`} key={entry.id} style={exportPageStyle}>
+          <div
+            className="h-full w-full overflow-hidden"
+            data-pdf-page={`entry-${entry.id}`}
+            key={entry.id}
+            style={exportPageStyle}
+          >
             <BookPage flat styleConfig={normalizeYearbookPageStyle(entry.styleConfig)}>
               <EntryPageContent entry={entry} />
             </BookPage>
           </div>
         ))}
-        <div data-pdf-page="back" style={exportPageStyle}>
+        <div className="h-full w-full overflow-hidden" data-pdf-page="back" style={exportPageStyle}>
           <BackCoverPage flat ownerName={ownerName} />
         </div>
       </div>
     </>
   );
+}
+
+async function buildYearbookPdf(
+  root: HTMLDivElement,
+  entries: YearbookEntry[],
+): Promise<jsPDF | null> {
+  let pdf: jsPDF | null = null;
+
+  const appendDomPage = async (selector: string, backgroundColor?: string) => {
+    const element = root.querySelector<HTMLElement>(selector);
+    if (!element) {
+      return;
+    }
+
+    const captured = await captureElementToPng(
+      element,
+      BOOK_WIDTH,
+      BOOK_HEIGHT,
+      backgroundColor,
+    );
+    pdf = appendRasterToPdf(pdf, captured);
+  };
+
+  const appendImagePage = async (url: string) => {
+    const loaded = await fetchImageForPdf(url);
+    pdf = appendRasterToPdf(pdf, loaded);
+  };
+
+  await appendDomPage('[data-pdf-page="cover"]', coverStyleConfig.background_color);
+
+  for (const entry of entries) {
+    if (entry.pageImageUrl) {
+      await appendImagePage(entry.pageImageUrl);
+      continue;
+    }
+
+    await appendDomPage(`[data-pdf-page="entry-${entry.id}"]`);
+  }
+
+  await appendDomPage('[data-pdf-page="back"]', coverStyleConfig.background_color);
+
+  return pdf;
 }
 
 function slugify(value: string) {

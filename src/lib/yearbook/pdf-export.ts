@@ -1,7 +1,8 @@
 import html2canvas from "html2canvas";
-import type { jsPDF } from "jspdf";
+import { jsPDF } from "jspdf";
 
-export const PDF_PAGE_MARGIN_MM = 10;
+/** Default print width; page height follows the raster aspect ratio. */
+export const PDF_REFERENCE_WIDTH_MM = 210;
 
 export type CapturedPng = {
   dataUrl: string;
@@ -15,6 +16,40 @@ export type LoadedImage = {
   height: number;
   width: number;
 };
+
+export type PdfRaster = CapturedPng | LoadedImage;
+
+export function getPdfPageDimensionsMm(
+  rasterWidthPx: number,
+  rasterHeightPx: number,
+  referenceWidthMm = PDF_REFERENCE_WIDTH_MM,
+) {
+  const aspect = rasterWidthPx / rasterHeightPx;
+
+  return {
+    heightMm: referenceWidthMm / aspect,
+    widthMm: referenceWidthMm,
+  };
+}
+
+export function appendRasterToPdf(pdf: jsPDF | null, raster: PdfRaster): jsPDF {
+  const { heightMm, widthMm } = getPdfPageDimensionsMm(raster.width, raster.height);
+  const format: [number, number] = [widthMm, heightMm];
+
+  const nextPdf = pdf ?? new jsPDF({ format, orientation: "portrait", unit: "mm" });
+
+  if (pdf) {
+    nextPdf.addPage(format, "portrait");
+  }
+
+  const pageWidth = nextPdf.internal.pageSize.getWidth();
+  const pageHeight = nextPdf.internal.pageSize.getHeight();
+  const imageFormat = "format" in raster && raster.format ? raster.format : "PNG";
+
+  nextPdf.addImage(raster.dataUrl, imageFormat, 0, 0, pageWidth, pageHeight);
+
+  return nextPdf;
+}
 
 export async function fetchImageForPdf(url: string): Promise<LoadedImage> {
   const response = await fetch(url);
@@ -65,9 +100,10 @@ export async function captureElementToPng(
   element: HTMLElement,
   width: number,
   height: number,
+  backgroundColor?: string,
 ): Promise<CapturedPng> {
   const canvas = await html2canvas(element, {
-    backgroundColor: null,
+    backgroundColor: backgroundColor ?? null,
     height,
     logging: false,
     scale: 2,
@@ -82,30 +118,4 @@ export async function captureElementToPng(
     height: canvas.height,
     width: canvas.width,
   };
-}
-
-export function addRasterToPdfPage(
-  pdf: jsPDF,
-  raster: { dataUrl: string; format?: "JPEG" | "PNG"; height: number; width: number },
-  marginMm = PDF_PAGE_MARGIN_MM,
-) {
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const maxWidth = pageWidth - marginMm * 2;
-  const maxHeight = pageHeight - marginMm * 2;
-  const aspect = raster.width / raster.height;
-
-  let widthMm = maxWidth;
-  let heightMm = widthMm / aspect;
-
-  if (heightMm > maxHeight) {
-    heightMm = maxHeight;
-    widthMm = heightMm * aspect;
-  }
-
-  const x = (pageWidth - widthMm) / 2;
-  const y = (pageHeight - heightMm) / 2;
-  const format = raster.format ?? "PNG";
-
-  pdf.addImage(raster.dataUrl, format, x, y, widthMm, heightMm);
 }
