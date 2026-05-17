@@ -40,9 +40,6 @@ const FONT_OPTIONS = [
 type EditableText = Textbox | IText;
 
 type CanvasEntryEditorProps = {
-  authorClass: string | null;
-  authorName: string;
-  authorUniversity: string | null;
   isSampleMode?: boolean;
   ownerUsername: string;
   submitError?: string | null;
@@ -50,9 +47,6 @@ type CanvasEntryEditorProps = {
 };
 
 export function CanvasEntryEditor({
-  authorClass,
-  authorName,
-  authorUniversity,
   isSampleMode = false,
   ownerUsername,
   submitError = null,
@@ -583,17 +577,6 @@ export function CanvasEntryEditor({
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-stone-200 bg-stone-100 p-4">
         <canvas ref={canvasElementRef} />
-      </div>
-
-      <div className="mt-6 rounded-2xl bg-yearbook-paper p-4">
-        <p className="text-sm font-semibold text-stone-700">From</p>
-        <p className="mt-1 text-lg font-bold">{authorName}</p>
-        <p className="text-sm text-stone-600">
-          {[authorUniversity, authorClass].filter(Boolean).join(" · ") || "No school details yet"}
-        </p>
-        <p className="mt-3 text-xs font-semibold text-amber-800">
-          Once signed, this entry cannot be edited. However, you can click preview and come back to edit. 
-        </p>
       </div>
 
       <button

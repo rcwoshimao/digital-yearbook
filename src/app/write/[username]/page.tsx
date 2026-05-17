@@ -88,15 +88,7 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
   }
 
   const [{ data: authorProfile }, { data: yearbook }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("display_name, university, graduation_class")
-      .eq("id", user.id)
-      .maybeSingle<{
-        display_name: string;
-        university: string | null;
-        graduation_class: string | null;
-      }>(),
+    supabase.from("profiles").select("id").eq("id", user.id).maybeSingle<{ id: string }>(),
     supabase
       .from("yearbooks")
       .select("id, owner_id")
@@ -159,6 +151,10 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
           {[ownerProfile.university, ownerProfile.graduation_class].filter(Boolean).join(" · ") ||
             "Profile details unavailable"}
         </p>
+        <p className="mt-3 text-xs font-semibold text-amber-800">
+          Once signed, this entry cannot be edited. However, you can click preview and come back to
+          edit.
+        </p>
       </section>
       {existingEntry ? (
         <div className="rounded-[2rem] bg-yearbook-paper p-6 text-center shadow-sm ring-1 ring-stone-200">
@@ -176,9 +172,6 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
         </div>
       ) : (
         <WriteEntryForm
-          authorClass={authorProfile.graduation_class}
-          authorName={authorProfile.display_name}
-          authorUniversity={authorProfile.university}
           ownerUsername={ownerProfile.username}
           submitError={searchParams.entry_error}
           yearbookId={yearbook.id}
