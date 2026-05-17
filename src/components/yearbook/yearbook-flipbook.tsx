@@ -11,6 +11,8 @@ type YearbookFlipbookProps = {
   ownerName: string;
   ownerUniversity?: string | null;
   shareUrl: string;
+  toolbarEnd?: React.ReactNode;
+  toolbarStart?: React.ReactNode;
 };
 
 type FlipBookRef = {
@@ -26,7 +28,7 @@ type FlipEvent = {
 
 const PAGE_WIDTH = 550;
 const PAGE_HEIGHT = 733;
-const bookStyle = { margin: "0 auto" };
+const bookStyle = {};
 
 export function YearbookFlipbook({
   entries,
@@ -34,6 +36,8 @@ export function YearbookFlipbook({
   ownerName,
   ownerUniversity,
   shareUrl,
+  toolbarEnd,
+  toolbarStart,
 }: YearbookFlipbookProps) {
   const [query, setQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -138,71 +142,67 @@ export function YearbookFlipbook({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-stone-700" htmlFor="entry-search">
-        Search by author
-      </label>
-      <input
-        id="entry-search"
-        className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-yearbook-accent"
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search entries..."
-        type="search"
-        value={query}
-      />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {toolbarStart ? <div className="shrink-0">{toolbarStart}</div> : null}
+        <input
+          id="entry-search"
+          aria-label="Search by author"
+          className="min-w-0 flex-1 rounded-2xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-yearbook-accent"
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search by author"
+          type="search"
+          value={query}
+        />
+        {toolbarEnd ? <div className="shrink-0">{toolbarEnd}</div> : null}
+      </div>
       {!shouldRenderBook ? (
         <div className="mt-4 rounded-2xl border border-dashed border-stone-300 bg-white/70 p-4 text-center text-sm text-stone-600">
           No entries match that author.
         </div>
       ) : (
-        <div className="mt-6 flex items-center justify-center gap-3 overflow-x-auto px-2">
+        <HTMLFlipBook
+          autoSize={false}
+          className="mx-auto mt-12"
+          clickEventForward
+          disableFlipByClick={false}
+          drawShadow={true}
+          flippingTime={700}
+          height={pageSize.height}
+          maxHeight={PAGE_HEIGHT}
+          maxShadowOpacity={0.35}
+          maxWidth={PAGE_WIDTH}
+          minHeight={420}
+          minWidth={300}
+          mobileScrollSupport={true}
+          onFlip={handleFlip}
+          ref={bookRef}
+          renderOnlyPageLengthChange
+          showCover={true}
+          showPageCorners
+          size="fixed"
+          startPage={0}
+          startZIndex={0}
+          style={bookStyle}
+          swipeDistance={30}
+          useMouseEvents
+          usePortrait={false}
+          width={pageSize.width}
+        >
+          {bookPages}
+        </HTMLFlipBook>
+      )}
+      {shouldRenderBook ? (
+        <div className="mt-4 flex items-center justify-center gap-4">
           <FlipButton label="Previous page" onClick={flipPrev}>
             ‹
           </FlipButton>
-          <HTMLFlipBook
-            autoSize={false}
-            className="mx-auto shadow-2xl shadow-stone-500/20"
-            clickEventForward
-            disableFlipByClick={false}
-            drawShadow={true}
-            flippingTime={700}
-            height={pageSize.height}
-            maxHeight={PAGE_HEIGHT}
-            maxShadowOpacity={0.35}
-            maxWidth={PAGE_WIDTH}
-            minHeight={420}
-            minWidth={300}
-            mobileScrollSupport={true}
-            onFlip={handleFlip}
-            ref={bookRef}
-            renderOnlyPageLengthChange
-            showCover={true}
-            showPageCorners
-            size="fixed"
-            startPage={0}
-            startZIndex={0}
-            style={bookStyle}
-            swipeDistance={30}
-            useMouseEvents
-            usePortrait={false}
-            width={pageSize.width}
-          >
-            {bookPages}
-          </HTMLFlipBook>
+          <p className="text-sm font-semibold text-stone-600">
+            {currentPage} / {totalPages}
+          </p>
           <FlipButton label="Next page" onClick={flipNext}>
             ›
           </FlipButton>
         </div>
-      )}
-      {entries.length === 0 ? (
-        <div className="mt-4 rounded-2xl bg-white/75 p-4 text-center shadow-sm ring-1 ring-stone-200">
-          <p className="text-sm font-semibold text-stone-700">Share link</p>
-          <p className="mt-2 break-all font-mono text-xs text-yearbook-accent">{shareUrl}</p>
-        </div>
-      ) : null}
-      {shouldRenderBook ? (
-        <p className="mt-4 text-center text-sm font-semibold text-stone-600">
-          {currentPage} / {totalPages}
-        </p>
       ) : null}
     </div>
   );
@@ -286,7 +286,7 @@ function FlipButton({
   return (
     <button
       aria-label={label}
-      className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full bg-yearbook-ink text-3xl font-semibold text-white shadow-sm transition hover:bg-yearbook-accent sm:flex"
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-yearbook-ink text-3xl font-semibold text-white shadow-sm transition hover:bg-yearbook-accent"
       onClick={onClick}
       type="button"
     >
