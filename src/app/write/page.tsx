@@ -3,24 +3,7 @@ import { redirect } from "next/navigation";
 import { WrittenEntryLog } from "@/components/yearbook/written-entry-log";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
-import type { YearbookEntry } from "@/lib/types/yearbook";
-import { normalizeYearbookPageStyle } from "@/lib/yearbook/page-style";
-
-type EntryRow = {
-  id: string;
-  yearbook_id: string;
-  author_id: string | null;
-  author_name: string;
-  author_university: string | null;
-  author_class: string | null;
-  content_text: string | null;
-  image_urls: string[] | null;
-  pdf_url: string | null;
-  page_image_url: string | null;
-  style_config: unknown;
-  created_at: string;
-  is_visible_to_owner: boolean | null;
-};
+import { ENTRY_SELECT, type EntryRow, mapEntryRow } from "@/lib/yearbook/entries";
 
 type InviteRow = {
   yearbook_id: string;
@@ -129,9 +112,7 @@ export default async function WriteHubPage() {
   const [{ data: authoredRows }, { data: inviteRows }] = await Promise.all([
     supabase
       .from("entries")
-      .select(
-        "id, yearbook_id, author_id, author_name, author_university, author_class, content_text, image_urls, pdf_url, page_image_url, style_config, created_at, is_visible_to_owner",
-      )
+      .select(ENTRY_SELECT)
       .eq("author_id", user.id)
       .order("created_at", { ascending: false })
       .returns<EntryRow[]>(),
@@ -142,7 +123,7 @@ export default async function WriteHubPage() {
       .returns<InviteRow[]>(),
   ]);
 
-  const authoredEntries = (authoredRows ?? []).map(mapEntryRow);
+  const authoredEntries = (authoredRows ?? []).map((row) => mapEntryRow(row));
   const targetYearbookIds = Array.from(
     new Set([
       ...(inviteRows ?? []).map((invite) => invite.yearbook_id),
@@ -230,22 +211,4 @@ function WritableYearbookList({ targets }: { targets: WritableYearbookTarget[] }
       ))}
     </div>
   );
-}
-
-function mapEntryRow(row: EntryRow): YearbookEntry {
-  return {
-    id: row.id,
-    yearbookId: row.yearbook_id,
-    authorId: row.author_id,
-    authorName: row.author_name,
-    authorUniversity: row.author_university,
-    authorClass: row.author_class,
-    contentText: row.content_text ?? "",
-    imageUrls: row.image_urls ?? [],
-    pdfUrl: row.pdf_url,
-    pageImageUrl: row.page_image_url,
-    styleConfig: normalizeYearbookPageStyle(row.style_config),
-    createdAt: new Date(row.created_at),
-    isVisibleToOwner: row.is_visible_to_owner ?? true,
-  };
 }

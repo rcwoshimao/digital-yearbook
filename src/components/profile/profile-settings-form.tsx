@@ -3,7 +3,6 @@ import { resendEmailVerification, updateEmail, updateUsername } from "@/app/prof
 type ProfileSettingsFormProps = {
   email: string;
   emailConfirmed: boolean;
-  isSampleMode?: boolean;
   pendingEmail?: string | null;
   returnUsername: string;
   userId: string;
@@ -13,7 +12,6 @@ type ProfileSettingsFormProps = {
 export function ProfileSettingsForm({
   email,
   emailConfirmed,
-  isSampleMode = false,
   pendingEmail,
   returnUsername,
   userId,
@@ -29,14 +27,7 @@ export function ProfileSettingsForm({
         </p>
       </div>
 
-      {isSampleMode ? (
-        <p className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
-          Sample data mode is on. Profile edits are disabled, but you can preview this page layout.
-        </p>
-      ) : null}
-
-      <form
-        action={isSampleMode ? undefined : updateUsername}
+      <form action={updateUsername}
         className="rounded-[2rem] border border-stone-200 bg-white/85 p-6 shadow-sm"
       >
         <input name="returnUsername" type="hidden" value={returnUsername} />
@@ -46,7 +37,6 @@ export function ProfileSettingsForm({
           <input
             className="mt-2 w-full rounded-full border border-stone-300 px-4 py-3 text-sm"
             defaultValue={username}
-            disabled={isSampleMode}
             name="username"
             placeholder="your_username"
           />
@@ -56,7 +46,6 @@ export function ProfileSettingsForm({
         </p>
         <button
           className="mt-4 rounded-full bg-yearbook-accent px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={isSampleMode}
           type="submit"
         >
           Save username
@@ -97,7 +86,7 @@ export function ProfileSettingsForm({
           </p>
         ) : null}
 
-        <form action={isSampleMode ? undefined : updateEmail} className="mt-4">
+        <form action={updateEmail} className="mt-4">
           <input name="returnUsername" type="hidden" value={returnUsername} />
           <input name="userId" type="hidden" value={userId} />
           <label className="block text-sm font-semibold text-stone-700">
@@ -105,7 +94,6 @@ export function ProfileSettingsForm({
             <input
               className="mt-2 w-full rounded-full border border-stone-300 px-4 py-3 text-sm"
               defaultValue={pendingEmail ?? email}
-              disabled={isSampleMode}
               name="email"
               placeholder="you@school.edu"
               type="email"
@@ -117,14 +105,13 @@ export function ProfileSettingsForm({
           </p>
           <button
             className="mt-4 rounded-full bg-yearbook-ink px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={isSampleMode}
             type="submit"
           >
             Update email
           </button>
         </form>
 
-        {!isSampleMode && (!emailConfirmed || pendingEmail) ? (
+        {!emailConfirmed || pendingEmail ? (
           <form action={resendEmailVerification} className="mt-4">
             <input name="returnUsername" type="hidden" value={returnUsername} />
             <input name="userId" type="hidden" value={userId} />

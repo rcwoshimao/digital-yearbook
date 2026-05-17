@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
-import { WriteEntryForm } from "@/components/forms/write-entry-form";
+import { CanvasEntryEditor } from "@/components/forms/canvas-entry-editor";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid, normalizeUsername } from "@/lib/username";
@@ -12,13 +12,11 @@ type WriteEntryPageProps = {
   };
   searchParams: {
     entry_error?: string;
-    entry_message?: string;
   };
 };
 
 export default async function WriteEntryPage({ params, searchParams }: WriteEntryPageProps) {
   const slug = normalizeUsername(params.username);
-
 
   if (!hasSupabaseEnv) {
     return (
@@ -131,31 +129,16 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
     .maybeSingle<{ created_at: string }>();
 
   const recipientName = ownerProfile.display_name;
+  const recipientMeta =
+    [ownerProfile.university, ownerProfile.graduation_class].filter(Boolean).join(" · ") ||
+    "Profile details unavailable";
 
   return (
-    <WritePageShell ownerUsername={ownerProfile.username} recipientName={recipientName}>
-      {searchParams.entry_error ? (
-        <p className="mb-6 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
-          {searchParams.entry_error}
-        </p>
-      ) : null}
-      {searchParams.entry_message ? (
-        <p className="mb-6 rounded-2xl bg-green-50 p-4 text-sm text-green-700">
-          {searchParams.entry_message}
-        </p>
-      ) : null}
-      <section className="mb-6 rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
-        <p className="text-sm font-semibold text-stone-700">Writing to</p>
-        <h2 className="mt-1 text-2xl font-bold">{recipientName}</h2>
-        <p className="text-sm text-stone-600">
-          {[ownerProfile.university, ownerProfile.graduation_class].filter(Boolean).join(" · ") ||
-            "Profile details unavailable"}
-        </p>
-        <p className="mt-3 text-xs font-semibold text-amber-800">
-          Once signed, this entry cannot be edited. However, you can click preview and come back to
-          edit.
-        </p>
-      </section>
+    <WritePageShell
+      ownerUsername={ownerProfile.username}
+      recipientMeta={recipientMeta}
+      recipientName={recipientName}
+    >
       {existingEntry ? (
         <div className="rounded-[2rem] bg-yearbook-paper p-6 text-center shadow-sm ring-1 ring-stone-200">
           <h2 className="text-2xl font-bold">You&apos;ve already signed {recipientName}&apos;s yearbook.</h2>
@@ -171,7 +154,7 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
           </Link>
         </div>
       ) : (
-        <WriteEntryForm
+        <CanvasEntryEditor
           ownerUsername={ownerProfile.username}
           submitError={searchParams.entry_error}
           yearbookId={yearbook.id}
@@ -184,10 +167,11 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
 type WritePageShellProps = {
   children: React.ReactNode;
   ownerUsername: string;
+  recipientMeta?: string;
   recipientName?: string;
 };
 
-function WritePageShell({ children, ownerUsername, recipientName }: WritePageShellProps) {
+function WritePageShell({ children, ownerUsername, recipientMeta, recipientName }: WritePageShellProps) {
   return (
     <main className="mx-auto min-h-screen max-w-6xl bg-yearbook-paper px-6 py-8">
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -203,12 +187,21 @@ function WritePageShell({ children, ownerUsername, recipientName }: WritePageShe
           Sign a Yearbook
         </p>
         <h1 className="mt-2 text-3xl font-bold">Design your yearbook page</h1>
-        <p className="mt-3 text-stone-700">
-          {recipientName
-            ? `You are signing ${recipientName}'s yearbook on the canvas below.`
-            : "You are opening a shared yearbook link."}{" "}
-          Your compiled PDF is permanent after you sign.
-        </p>
+        {recipientName ? (
+          <>
+            <h2 className="mt-4 text-2xl font-bold">{recipientName}</h2>
+            {recipientMeta ? <p className="text-sm text-stone-600">{recipientMeta}</p> : null}
+            <p className="mt-3 text-stone-700">
+              Design your page on the canvas below. Your signed page is permanent after you submit.
+            </p>
+            <p className="mt-3 text-xs font-semibold text-amber-800">
+              Once signed, this entry cannot be edited. You can preview and return to edit before
+              signing.
+            </p>
+          </>
+        ) : (
+          <p className="mt-3 text-stone-700">You are opening a shared yearbook link.</p>
+        )}
         <p className="mt-2 text-sm text-stone-500">
           Yearbook link: <span className="font-semibold text-yearbook-ink">@{ownerUsername}</span>
         </p>

@@ -1,108 +1,50 @@
-# Checking that compiled entries use JPEG inside the PDF
+# Checking signed page images
 
-The canvas editor exports each page as a **JPEG** snapshot, embeds it in a **PDF**, and uploads that PDF to Supabase (`entry-pdfs`). The file is still named `entry.pdf` and has MIME type `application/pdf` — the JPEG is the single full-page image inside the PDF, not a separate `.jpg` upload.
+The canvas editor rasterizes each page as a **JPEG** and uploads it to Supabase Storage (`entry-pdfs` bucket) at `{yearbookId}/{userId}.jpg`. The path is stored on the entry as `page_image_url`.
 
-Use these steps to verify the pipeline after changing export settings in `src/components/forms/canvas-entry-editor.tsx`.
+Use these steps after changing export settings in `src/components/forms/canvas-entry-editor.tsx` (`compilePagePreview`).
 
 ---
 
-## 1. Get a sample PDF
+## 1. Get a sample image
 
-**From the app (before or after signing)**
+**From the app (before signing)**
 
 1. Open the write flow and design a page.
-2. Click **Compile PDF?** → confirm → preview opens.
-3. Save the file:
-   - Right-click inside the preview iframe → **Save as…**, or
-   - DevTools → **Network** → open the preview → save the `blob:` or PDF response.
+2. Click **Preview page** → confirm → review the preview dialog.
+3. In DevTools → **Network**, find the blob preview or inspect the preview `<img>` `src`.
 
 **From Supabase (after signing)**
 
 1. Dashboard → **Storage** → bucket `entry-pdfs`.
-2. Open `{yearbookId}/{userId}.pdf` and download.
-
-Example path on your machine:
-
-```text
-~/Desktop/entry.pdf
-```
+2. Open `{yearbookId}/{userId}.jpg` and download.
 
 ---
 
-## 2. Definitive check: `pdfimages` (recommended)
+## 2. Quick format check
 
-### Install once (macOS)
-
-```bash
-brew install poppler
-which pdfimages
-```
-
-### List embedded images
+JPEG data URLs and files often start with the magic bytes visible in base64 as `/9j/`:
 
 ```bash
-pdfimages -list ~/Desktop/entry.pdf
+# If you saved a data URL to a file, or have the raw bytes:
+xxd -l 3 your-page.jpg
+# Should show: ff d8 ff
 ```
 
-**JPEG inside the PDF** — look for:
-
-- Column `enc` = **`jpeg`**, or
-- Filter **`DCTDecode`** in the output
-
-**PNG** — often shows **`FlateDecode`** instead.
-
-Example (JPEG):
-
-```text
-page   num  type   width height color comp bpc  enc interp  ...
-   1     0 image    1785  2526  rgb     3   8  jpeg   no    ...
-```
-
-### Extract the embedded image (optional)
-
-```bash
-mkdir -p /tmp/pdf-test && cd /tmp/pdf-test
-pdfimages -j ~/Desktop/entry.pdf extracted
-ls -la extracted*
-```
-
-You should get `extracted-000.jpg` (prefix `-j` = write JPEGs when possible). Open that file to see the exact raster embedded in the PDF.
-
----
-
-## 3. Quick check without Poppler
-
-```bash
-strings ~/Desktop/entry.pdf | grep -E "DCTDecode|/JPEG"
-```
-
-Seeing **`DCTDecode`** means the page image is almost certainly JPEG.
-
----
-
-## 4. Browser check (canvas export only)
-
-While developing, temporarily log in `compilePdfPreview` after `toDataURL`:
+Or in the browser console during development, after `canvas.toDataURL`:
 
 ```ts
 console.log(dataUrl.slice(0, 30));
+// data:image/jpeg;base64,
 ```
 
-Expected:
+---
 
-```text
-data:image/jpeg;base64,
-```
+## 3. Owner export PDF (dashboard)
 
-The base64 after that often starts with `/9j/` (JPEG magic bytes). This proves Fabric exported JPEG **before** jsPDF; use §2 to confirm the **saved PDF**.
+The dashboard **Export PDF** button builds a multi-page PDF from cover, signed page images, and legacy text/PDF entries. That path uses `src/lib/yearbook/pdf-export.ts` and `src/components/yearbook/pdf-export-button.tsx`.
 
-You can also log PDF size:
-
-```ts
-console.log("PDF size (KB):", Math.round(blob.size / 1024));
-```
-
-Photo-heavy pages are usually much smaller as JPEG than PNG at the same multiplier.
+For JPEG pages, `pdfimages -list` on an exported yearbook PDF should show `jpeg` / `DCTDecode` for image-only entry pages.
 
 ---
 
@@ -110,16 +52,14 @@ Photo-heavy pages are usually much smaller as JPEG than PNG at the same multipli
 
 | Check | Pass? |
 |-------|-------|
-| `dataUrl` starts with `data:image/jpeg` | ☐ |
-| `pdfimages -list` shows `jpeg` / `DCTDecode` | ☐ |
-| `pdfimages -j` produces `extracted-000.jpg` | ☐ |
-| Preview / flipbook looks correct | ☐ |
-| Upload succeeds (≤ 10 MB, `application/pdf`) | ☐ |
+| Preview `dataUrl` starts with `data:image/jpeg` | ☐ |
+| Storage object is `{yearbookId}/{userId}.jpg` | ☐ |
+| Flipbook shows the signed page correctly | ☐ |
+| Upload succeeds (≤ 10 MB, `image/*`) | ☐ |
 
 ---
 
 ## Reference
 
-Export code: `compilePdfPreview` in `src/components/forms/canvas-entry-editor.tsx` — `format: "jpeg"`, `pdf.addImage(..., "JPEG", ...)`.
-
-Upload validation: `src/app/yearbook/[yearbookId]/write/actions.ts` (`MAX_PDF_SIZE` = 10 MB).
+- Export: `compilePagePreview` in `src/components/forms/canvas-entry-editor.tsx` — `format: "jpeg"`, `PAGE_EXPORT_MULTIPLIER`, `PAGE_EXPORT_JPEG_QUALITY`.
+- Upload: `submitCanvasEntry` in `src/app/yearbook/[yearbookId]/write/actions.ts` (`MAX_PAGE_IMAGE_SIZE` = 10 MB).

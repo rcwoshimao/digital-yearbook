@@ -18,6 +18,8 @@ async function revalidateOwnerViews(supabase: ReturnType<typeof createClient>) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  revalidatePath("/dashboard");
+
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -25,12 +27,9 @@ async function revalidateOwnerViews(supabase: ReturnType<typeof createClient>) {
       .eq("id", user.id)
       .maybeSingle<{ username: string }>();
 
-    revalidatePath("/dashboard");
     if (profile?.username) {
       revalidatePath(`/profile/${profile.username}`);
     }
-  } else {
-    revalidatePath("/dashboard");
   }
 }
 
@@ -86,15 +85,11 @@ export async function addInvite(formData: FormData) {
     ownerRedirect(formData, lookupError.message);
   }
 
-  if (!invitedProfile) {
+  if (!invitedProfile?.id) {
     ownerRedirect(formData, "No user found with that username.");
   }
 
-  const invitedUserId = invitedProfile?.id;
-
-  if (!invitedUserId) {
-    ownerRedirect(formData, "No user found with that username.");
-  }
+  const invitedUserId = invitedProfile.id;
 
   if (invitedUserId === user.id) {
     ownerRedirect(formData, "You cannot invite yourself to your own yearbook.");

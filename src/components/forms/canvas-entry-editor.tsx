@@ -40,14 +40,12 @@ const FONT_OPTIONS = [
 type EditableText = Textbox | IText;
 
 type CanvasEntryEditorProps = {
-  isSampleMode?: boolean;
   ownerUsername: string;
   submitError?: string | null;
   yearbookId: string;
 };
 
 export function CanvasEntryEditor({
-  isSampleMode = false,
   ownerUsername,
   submitError = null,
   yearbookId,
@@ -190,7 +188,7 @@ export function CanvasEntryEditor({
   }, []);
 
   useEffect(() => {
-    if (isMobile || isSampleMode || !canvasElementRef.current) {
+    if (isMobile || !canvasElementRef.current) {
       return;
     }
 
@@ -213,7 +211,7 @@ export function CanvasEntryEditor({
       canvas.dispose();
       fabricRef.current = null;
     };
-  }, [bindCanvasEvents, isMobile, isSampleMode, pushHistory, yearbookId]);
+  }, [bindCanvasEvents, isMobile, pushHistory, yearbookId]);
 
   useEffect(() => {
     if (!toastMessage) {
@@ -431,10 +429,6 @@ export function CanvasEntryEditor({
   }
 
   async function signYearbook() {
-    if (isSampleMode) {
-      return;
-    }
-
     const pageImageBlob = compiledPageImageRef.current;
     if (!pageImageBlob) {
       setToastMessage("Preview your page before signing.");
@@ -472,12 +466,6 @@ export function CanvasEntryEditor({
 
   return (
     <section className="rounded-[2rem] bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
-      {isSampleMode ? (
-        <p className="mb-5 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-900">
-          Sample mode is read-only, so this editor will not submit to Supabase.
-        </p>
-      ) : null}
-
       {showDraftBanner ? (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
           <p className="font-semibold">You have a saved draft. Resume?</p>
@@ -506,7 +494,6 @@ export function CanvasEntryEditor({
         canUndo={canUndo}
         fontFamily={fontFamily}
         fontSize={fontSize}
-        isSampleMode={isSampleMode}
         onAddImage={() => imageInputRef.current?.click()}
         onAddText={addText}
         onFontFamilyChange={(value) => {
@@ -580,8 +567,7 @@ export function CanvasEntryEditor({
       </div>
 
       <button
-        className="mt-6 rounded-full bg-yearbook-ink px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={isSampleMode}
+        className="mt-6 rounded-full bg-yearbook-ink px-5 py-3 text-sm font-semibold text-white"
         onClick={() => setCompileDialogOpen(true)}
         type="button"
       >
@@ -678,11 +664,11 @@ export function CanvasEntryEditor({
             </button>
             <button
               className="rounded-full bg-yearbook-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              disabled={isSampleMode || isSubmitting}
+              disabled={isSubmitting}
               onClick={() => void signYearbook()}
               type="button"
             >
-              {isSampleMode ? "Sample mode" : isSubmitting ? "Signing…" : "Sign — I'm sure"}
+              {isSubmitting ? "Signing…" : "Sign — I'm sure"}
             </button>
           </div>
         </DialogContent>
@@ -722,7 +708,6 @@ function Toolbar({
   canUndo,
   fontFamily,
   fontSize,
-  isSampleMode,
   onAddImage,
   onAddText,
   onBackgroundColorChange,
@@ -743,7 +728,6 @@ function Toolbar({
   canUndo: boolean;
   fontFamily: string;
   fontSize: number;
-  isSampleMode: boolean;
   onAddImage: () => void;
   onAddText: () => void;
   onBackgroundColorChange: (color: string) => void;
@@ -762,16 +746,14 @@ function Toolbar({
   return (
     <div className="flex flex-wrap gap-3">
       <button
-        className="rounded-full bg-yearbook-ink px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
-        disabled={isSampleMode}
+        className="rounded-full bg-yearbook-ink px-4 py-2 text-xs font-semibold text-white"
         onClick={onAddText}
         type="button"
       >
         Add Text
       </button>
       <button
-        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 disabled:opacity-50"
-        disabled={isSampleMode}
+        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700"
         onClick={onAddImage}
         type="button"
       >
@@ -787,16 +769,14 @@ function Toolbar({
         />
       </label>
       <button
-        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 disabled:opacity-50"
-        disabled={isSampleMode}
+        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700"
         onClick={onBackgroundImage}
         type="button"
       >
         Background Image
       </button>
       <button
-        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 disabled:opacity-50"
-        disabled={isSampleMode}
+        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700"
         onClick={onClearBackgroundImage}
         type="button"
       >
@@ -804,7 +784,7 @@ function Toolbar({
       </button>
       <button
         className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 disabled:opacity-50"
-        disabled={!canUndo || isSampleMode}
+        disabled={!canUndo}
         onClick={onUndo}
         type="button"
       >
@@ -812,23 +792,21 @@ function Toolbar({
       </button>
       <button
         className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 disabled:opacity-50"
-        disabled={!canRedo || isSampleMode}
+        disabled={!canRedo}
         onClick={onRedo}
         type="button"
       >
         Redo
       </button>
       <button
-        className="rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-700 disabled:opacity-50"
-        disabled={isSampleMode}
+        className="rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-700"
         onClick={onReset}
         type="button"
       >
         Reset Board
       </button>
       <button
-        className="rounded-full border border-yearbook-accent px-4 py-2 text-xs font-semibold text-yearbook-accent disabled:opacity-50"
-        disabled={isSampleMode}
+        className="rounded-full border border-yearbook-accent px-4 py-2 text-xs font-semibold text-yearbook-accent"
         onClick={onSaveDraft}
         type="button"
       >

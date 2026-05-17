@@ -2,9 +2,10 @@ import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ProfileSettingsForm } from "@/components/profile/profile-settings-form";
 import { ShareControls } from "@/components/yearbook/share-controls";
+import { FlashBanner } from "@/components/ui/flash-banner";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
-import type { YearbookInvite } from "@/lib/types/yearbook";
+import { loadYearbookInvites } from "@/lib/yearbook/invites";
 import { isUuid, normalizeUsername } from "@/lib/username";
 
 type ProfilePageProps = {
@@ -15,18 +16,6 @@ type ProfilePageProps = {
     profile_error?: string;
     profile_message?: string;
   };
-};
-
-type InviteRow = {
-  id: string;
-  yearbook_id: string;
-  invited_user_id: string;
-  invited_at: string;
-};
-
-type InviteProfileRow = {
-  id: string;
-  username: string;
 };
 
 type YearbookRow = {
@@ -114,34 +103,7 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
     );
   }
 
-  const { data: inviteRows } = await supabase
-    .from("yearbook_invites")
-    .select("id, yearbook_id, invited_user_id, invited_at")
-    .eq("yearbook_id", yearbook.id)
-    .order("invited_at", { ascending: false })
-    .returns<InviteRow[]>();
-
-  const invitedUserIds = Array.from(new Set((inviteRows ?? []).map((invite) => invite.invited_user_id)));
-  const { data: invitedProfiles } =
-    invitedUserIds.length > 0
-      ? await supabase
-          .from("profiles")
-          .select("id, username")
-          .in("id", invitedUserIds)
-          .returns<InviteProfileRow[]>()
-      : { data: [] };
-
-  const invitedUsernamesById = new Map(
-    (invitedProfiles ?? []).map((invitedProfile) => [invitedProfile.id, invitedProfile.username]),
-  );
-  const invites: YearbookInvite[] = (inviteRows ?? []).map((row) => ({
-    id: row.id,
-    yearbookId: row.yearbook_id,
-    invitedUserId: row.invited_user_id,
-    invitedUsername: invitedUsernamesById.get(row.invited_user_id) ?? "unknown",
-    invitedAt: new Date(row.invited_at),
-  }));
-
+  const invites = await loadYearbookInvites(supabase, yearbook.id);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const email = profile.email ?? user.email ?? "";
   const emailConfirmed = Boolean(user.email_confirmed_at);
@@ -150,12 +112,10 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
   return (
     <DashboardShell profileUsername={profile.username} userName={profile.display_name}>
       {searchParams.profile_error ? (
-        <p className="mb-6 rounded-2xl bg-red-50 p-4 text-sm text-red-700">{searchParams.profile_error}</p>
+        <FlashBanner message={searchParams.profile_error} tone="error" />
       ) : null}
       {searchParams.profile_message ? (
-        <p className="mb-6 rounded-2xl bg-green-50 p-4 text-sm text-green-700">
-          {searchParams.profile_message}
-        </p>
+        <FlashBanner message={searchParams.profile_message} tone="success" />
       ) : null}
       <div className="space-y-8">
         <ProfileSettingsForm

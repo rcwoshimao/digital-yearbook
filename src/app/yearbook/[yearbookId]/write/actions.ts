@@ -7,8 +7,8 @@ import { normalizeUsername } from "@/lib/username";
 
 const MAX_PAGE_IMAGE_SIZE = 10 * 1024 * 1024;
 
-function writeUrl(ownerUsername: string, type: "entry_error" | "entry_message", message: string) {
-  const params = new URLSearchParams({ [type]: message });
+function writeErrorUrl(ownerUsername: string, message: string) {
+  const params = new URLSearchParams({ entry_error: message });
   return `/write/${normalizeUsername(ownerUsername)}?${params.toString()}`;
 }
 
@@ -48,15 +48,15 @@ export async function submitCanvasEntry(formData: FormData) {
   }
 
   if (!(pageImageFile instanceof File) || pageImageFile.size === 0) {
-    redirect(writeUrl(ownerUsername, "entry_error", "A page image is required to sign this yearbook."));
+    redirect(writeErrorUrl(ownerUsername, "A page image is required to sign this yearbook."));
   }
 
   if (!pageImageFile.type.startsWith("image/")) {
-    redirect(writeUrl(ownerUsername, "entry_error", "Only image uploads are allowed."));
+    redirect(writeErrorUrl(ownerUsername, "Only image uploads are allowed."));
   }
 
   if (pageImageFile.size > MAX_PAGE_IMAGE_SIZE) {
-    redirect(writeUrl(ownerUsername, "entry_error", "The page image must be 10MB or smaller."));
+    redirect(writeErrorUrl(ownerUsername, "The page image must be 10MB or smaller."));
   }
 
   const supabase = createClient();
@@ -79,7 +79,7 @@ export async function submitCanvasEntry(formData: FormData) {
     }>();
 
   if (profileError || !profile) {
-    redirect(writeUrl(ownerUsername, "entry_error", "Complete your profile before writing an entry."));
+    redirect(writeErrorUrl(ownerUsername, "Complete your profile before writing an entry."));
   }
 
   const entryId = randomUUID();
@@ -101,7 +101,7 @@ export async function submitCanvasEntry(formData: FormData) {
         ? "Could not upload your page. Run supabase/migrations/0008_add_entry_page_image_url.sql in the Supabase SQL editor, then try again."
         : uploadError.message;
 
-    redirect(writeUrl(ownerUsername, "entry_error", message));
+    redirect(writeErrorUrl(ownerUsername, message));
   }
 
   const { error } = await supabase.from("entries").insert({
@@ -124,11 +124,8 @@ export async function submitCanvasEntry(formData: FormData) {
       ? "Could not save your entry. Run supabase/setup_entry_pdfs_bucket.sql in the Supabase SQL editor, then try again."
       : error.message;
 
-    redirect(writeUrl(ownerUsername, "entry_error", message));
+    redirect(writeErrorUrl(ownerUsername, message));
   }
 
   redirect("/dashboard?signed=1");
 }
-
-/** @deprecated Use submitCanvasEntry */
-export const submitPdfEntry = submitCanvasEntry;
