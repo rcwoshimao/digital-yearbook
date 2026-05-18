@@ -7,7 +7,6 @@ export type Profile = {
   email: string;
   university: string | null;
   graduationClass: string | null;
-  avatarUrl: string | null;
   createdAt: Date;
 };
 

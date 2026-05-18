@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/forms/auth-form";
+import { hasDevEmailAuth } from "@/lib/auth/dev";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
+import { createClient } from "@/lib/supabase/server";
 
 type LoginPageProps = {
   searchParams: {
@@ -9,7 +12,18 @@ type LoginPageProps = {
   };
 };
 
-export default function LoginPage({ searchParams }: LoginPageProps) {
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  if (hasSupabaseEnv) {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      redirect("/dashboard");
+    }
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden px-6 py-12">
       <div className="yearbook-page-bg absolute inset-0 -z-10" />
@@ -25,7 +39,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
             A warm place to collect the notes you will keep.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-stone-700">
-            Sign in to read your yearbook, invite friends, and write permanent graduation memories.
+            Sign in with Google to read your yearbook, invite friends, and write permanent
+            graduation memories.
           </p>
         </div>
 
@@ -34,6 +49,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
             authError={searchParams.auth_error}
             authMessage={searchParams.auth_message}
             isConfigured={hasSupabaseEnv}
+            showDevEmailAuth={hasDevEmailAuth}
           />
         </div>
 

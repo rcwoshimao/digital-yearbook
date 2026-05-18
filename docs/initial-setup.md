@@ -31,7 +31,6 @@ create table profiles (
   display_name text not null,
   university text,
   graduation_class text,        -- e.g. "Class of 2025"
-  avatar_url text,
   created_at timestamptz default now()
 );
 ```

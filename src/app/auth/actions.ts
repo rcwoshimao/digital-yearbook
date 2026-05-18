@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { hasDevEmailAuth } from "@/lib/auth/dev";
 import { resolveLoginEmail } from "@/lib/auth/resolve-login-email";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +13,10 @@ function encodedMessage(type: "auth_error" | "auth_message", message: string) {
 }
 
 export async function signIn(formData: FormData) {
+  if (!hasDevEmailAuth) {
+    redirect(encodedMessage("auth_error", "Sign in with Google on the login page."));
+  }
+
   if (!hasSupabaseEnv) {
     redirect(encodedMessage("auth_error", "Add Supabase environment variables before signing in."));
   }
@@ -53,6 +58,10 @@ export async function signIn(formData: FormData) {
 }
 
 export async function signUp(formData: FormData) {
+  if (!hasDevEmailAuth) {
+    redirect(encodedMessage("auth_error", "Sign up with Google on the login page."));
+  }
+
   if (!hasSupabaseEnv) {
     redirect(encodedMessage("auth_error", "Add Supabase environment variables before signing up."));
   }
@@ -77,6 +86,7 @@ export async function signUp(formData: FormData) {
     );
   }
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const supabase = createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -86,6 +96,7 @@ export async function signUp(formData: FormData) {
         display_name: displayName,
         username,
       },
+      emailRedirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent("/dashboard")}`,
     },
   });
 

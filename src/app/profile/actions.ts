@@ -75,17 +75,14 @@ export async function updateUsername(formData: FormData) {
   profileRedirect(username, "profile_message", "Username updated.");
 }
 
-export async function updateEmail(formData: FormData) {
+export async function updateSchool(formData: FormData) {
   const userId = String(formData.get("userId") ?? "");
   const returnUsername = normalizeUsername(String(formData.get("returnUsername") ?? ""));
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const university = String(formData.get("university") ?? "").trim() || null;
+  const graduationClass = String(formData.get("graduationClass") ?? "").trim() || null;
 
   if (!userId) {
     redirect("/login");
-  }
-
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    profileRedirect(returnUsername, "profile_error", "Enter a valid email address.");
   }
 
   const supabase = createClient();
@@ -101,98 +98,19 @@ export async function updateEmail(formData: FormData) {
     profileRedirect(returnUsername, "profile_error", "You can only edit your own profile.");
   }
 
-  const currentEmail = user.email?.toLowerCase() ?? "";
-  const pendingEmail = user.new_email?.toLowerCase() ?? "";
-
-  if (email === currentEmail || email === pendingEmail) {
-    profileRedirect(returnUsername, "profile_message", "That email is already on your account.");
-  }
-
-  const { error } = await supabase.auth.updateUser({ email });
-
-  if (!error) {
-    await supabase.from("profiles").update({ email }).eq("id", userId);
-  }
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      university,
+      graduation_class: graduationClass,
+    })
+    .eq("id", userId);
 
   if (error) {
-    const message = error.message.toLowerCase();
-
-    if (message.includes("already") && message.includes("registered")) {
-      profileRedirect(returnUsername, "profile_error", "That email is already linked to another account.");
-    }
-
-    if (message.includes("rate limit")) {
-      profileRedirect(
-        returnUsername,
-        "profile_error",
-        "Too many email change attempts. Please wait a few minutes and try again.",
-      );
-    }
-
     profileRedirect(returnUsername, "profile_error", error.message);
   }
 
   revalidateProfile([returnUsername]);
-  profileRedirect(
-    returnUsername,
-    "profile_message",
-    "We sent a confirmation link to your new email. Your sign-in email will not change until you confirm it.",
-  );
+  profileRedirect(returnUsername, "profile_message", "School details updated.");
 }
 
-export async function resendEmailVerification(formData: FormData) {
-  const userId = String(formData.get("userId") ?? "");
-  const returnUsername = normalizeUsername(String(formData.get("returnUsername") ?? ""));
-
-  if (!userId) {
-    redirect("/login");
-  }
-
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  if (user.id !== userId) {
-    profileRedirect(returnUsername, "profile_error", "You can only manage your own account.");
-  }
-
-  const targetEmail = user.new_email ?? user.email;
-
-  if (!targetEmail) {
-    profileRedirect(returnUsername, "profile_error", "No email address is available to verify.");
-  }
-
-  const isPendingChange = Boolean(user.new_email);
-  const { error } = await supabase.auth.resend({
-    type: isPendingChange ? "email_change" : "signup",
-    email: targetEmail,
-  });
-
-  if (error) {
-    const message = error.message.toLowerCase();
-
-    if (message.includes("rate limit")) {
-      profileRedirect(
-        returnUsername,
-        "profile_error",
-        "Too many verification emails sent. Please wait a few minutes before trying again.",
-      );
-    }
-
-    profileRedirect(returnUsername, "profile_error", error.message);
-  }
-
-  revalidateProfile([returnUsername]);
-  profileRedirect(
-    returnUsername,
-    "profile_message",
-    isPendingChange
-      ? `Sent another confirmation email to ${targetEmail}.`
-      : `Sent another verification email to ${targetEmail}.`,
-  );
-}

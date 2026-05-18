@@ -5,6 +5,7 @@ import { ShareControls } from "@/components/yearbook/share-controls";
 import { FlashBanner } from "@/components/ui/flash-banner";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { getPrimaryAuthLabel, usesGoogleAuth } from "@/lib/auth/providers";
 import { loadYearbookInvites } from "@/lib/yearbook/invites";
 import { isUuid, normalizeUsername } from "@/lib/username";
 
@@ -54,9 +55,16 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
   const [{ data: profile }, { data: yearbook }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, display_name, username, email")
+      .select("id, display_name, username, email, university, graduation_class")
       .eq("id", user.id)
-      .maybeSingle<{ id: string; display_name: string; username: string; email: string | null }>(),
+      .maybeSingle<{
+        id: string;
+        display_name: string;
+        username: string;
+        email: string | null;
+        university: string | null;
+        graduation_class: string | null;
+      }>(),
     supabase
       .from("yearbooks")
       .select("id, share_mode")
@@ -103,11 +111,15 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
     );
   }
 
+  const signInEmail = user.email?.toLowerCase() ?? "";
+  const usesGoogle = usesGoogleAuth(user);
+
+  if (signInEmail && profile.email?.toLowerCase() !== signInEmail) {
+    await supabase.from("profiles").update({ email: signInEmail }).eq("id", user.id);
+  }
+
   const invites = await loadYearbookInvites(supabase, yearbook.id);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const email = profile.email ?? user.email ?? "";
-  const emailConfirmed = Boolean(user.email_confirmed_at);
-  const pendingEmail = user.new_email ?? null;
 
   return (
     <DashboardShell profileUsername={profile.username} userName={profile.display_name}>
@@ -119,11 +131,13 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
       ) : null}
       <div className="space-y-8">
         <ProfileSettingsForm
-          email={email}
-          emailConfirmed={emailConfirmed}
-          pendingEmail={pendingEmail}
+          authLabel={getPrimaryAuthLabel(user)}
+          graduationClass={profile.graduation_class}
           returnUsername={profile.username}
+          signInEmail={signInEmail}
+          university={profile.university}
           userId={user.id}
+          usesGoogle={usesGoogle}
           username={profile.username}
         />
         <ShareControls

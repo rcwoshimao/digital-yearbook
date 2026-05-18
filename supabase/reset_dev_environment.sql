@@ -168,13 +168,12 @@ begin
       regexp_replace(lower(split_part(new.email, '@', 1)), '[^a-z0-9_]+', '_', 'g') || '_' || substr(new.id::text, 1, 8)
     );
 
-    insert into public.profiles (id, display_name, username, email, avatar_url)
+    insert into public.profiles (id, display_name, username, email)
     values (
       new.id,
       fallback_name,
       fallback_username,
-      lower(new.email),
-      new.raw_user_meta_data ->> 'avatar_url'
+      lower(new.email)
     );
 
     insert into public.yearbooks (owner_id)
