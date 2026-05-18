@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { CanvasEntryEditor } from "@/components/forms/canvas-entry-editor";
+import { EntryPageContent } from "@/components/yearbook/entry-page-content";
+import { BOOK_HEIGHT, BOOK_WIDTH } from "@/components/yearbook/flipbook-viewer";
+import { ENTRY_SELECT, type EntryRow, mapEntryRow, signEntryRowAssets } from "@/lib/yearbook/entries";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid, normalizeUsername } from "@/lib/username";
@@ -121,57 +124,88 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
     );
   }
 
-  const { data: existingEntry } = await supabase
+  const { data: existingEntryRow } = await supabase
     .from("entries")
-    .select("created_at")
+    .select(ENTRY_SELECT)
     .eq("yearbook_id", yearbook.id)
     .eq("author_id", user.id)
-    .maybeSingle<{ created_at: string }>();
+    .maybeSingle<EntryRow>();
 
   const recipientName = ownerProfile.display_name;
   const recipientMeta =
     [ownerProfile.university, ownerProfile.graduation_class].filter(Boolean).join(" · ") ||
     "Profile details unavailable";
 
+  if (existingEntryRow) {
+    const signedEntry = mapEntryRow(
+      existingEntryRow,
+      await signEntryRowAssets(supabase, existingEntryRow),
+    );
+
+    return (
+      <WritePageShell mode="view-signed" ownerUsername={ownerProfile.username}>
+        <div className="mx-auto max-w-2xl space-y-8">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold">
+              You&apos;ve already signed {recipientName}&apos;s yearbook.
+            </h2>
+            <p className="mt-2 text-stone-700">
+              Signed on {format(signedEntry.createdAt, "PPP")}. Each yearbook can only receive one
+              note from you.
+            </p>
+          </div>
+
+          <div
+            className="mx-auto overflow-hidden rounded-[2rem] bg-white shadow-lg ring-1 ring-stone-200"
+            style={{ aspectRatio: `${BOOK_WIDTH} / ${BOOK_HEIGHT}`, maxWidth: BOOK_WIDTH }}
+          >
+            <EntryPageContent entry={signedEntry} showSignedPageMetadata={false} />
+          </div>
+
+          <div className="text-center">
+            <Link
+              className="inline-flex rounded-full bg-yearbook-ink px-5 py-3 text-sm font-semibold text-white"
+              href="/write"
+            >
+              Back to Sign Yearbooks
+            </Link>
+          </div>
+        </div>
+      </WritePageShell>
+    );
+  }
+
   return (
     <WritePageShell
+      mode="editor"
       ownerUsername={ownerProfile.username}
       recipientMeta={recipientMeta}
       recipientName={recipientName}
     >
-      {existingEntry ? (
-        <div className="rounded-[2rem] bg-yearbook-paper p-6 text-center shadow-sm ring-1 ring-stone-200">
-          <h2 className="text-2xl font-bold">You&apos;ve already signed {recipientName}&apos;s yearbook.</h2>
-          <p className="mt-2 text-stone-700">
-            Signed on {format(new Date(existingEntry.created_at), "PPP")}. Each yearbook can only
-            receive one note from you.
-          </p>
-          <Link
-            className="mt-5 inline-flex rounded-full bg-yearbook-ink px-5 py-3 text-sm font-semibold text-white"
-            href="/write"
-          >
-            Back to Sign Yearbooks
-          </Link>
-        </div>
-      ) : (
-        <CanvasEntryEditor
-          ownerUsername={ownerProfile.username}
-          submitError={searchParams.entry_error}
-          yearbookId={yearbook.id}
-        />
-      )}
+      <CanvasEntryEditor
+        ownerUsername={ownerProfile.username}
+        submitError={searchParams.entry_error}
+        yearbookId={yearbook.id}
+      />
     </WritePageShell>
   );
 }
 
 type WritePageShellProps = {
   children: React.ReactNode;
+  mode?: "editor" | "view-signed";
   ownerUsername: string;
   recipientMeta?: string;
   recipientName?: string;
 };
 
-function WritePageShell({ children, ownerUsername, recipientMeta, recipientName }: WritePageShellProps) {
+function WritePageShell({
+  children,
+  mode = "editor",
+  ownerUsername,
+  recipientMeta,
+  recipientName,
+}: WritePageShellProps) {
   return (
     <main className="mx-auto min-h-screen max-w-6xl bg-yearbook-paper px-6 py-8">
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -182,30 +216,32 @@ function WritePageShell({ children, ownerUsername, recipientMeta, recipientName 
           My Yearbook
         </Link>
       </header>
-      <div className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yearbook-accent">
-          Sign a Yearbook
-        </p>
-        <h1 className="mt-2 text-3xl font-bold">Design your yearbook page</h1>
-        {recipientName ? (
-          <>
-            <h2 className="mt-4 text-2xl font-bold">{recipientName}</h2>
-            {recipientMeta ? <p className="text-sm text-stone-600">{recipientMeta}</p> : null}
-            <p className="mt-3 text-stone-700">
-              Design your page on the canvas below. Your signed page is permanent after you submit.
-            </p>
-            <p className="mt-3 text-xs font-semibold text-amber-800">
-              Once signed, this entry cannot be edited. You can preview and return to edit before
-              signing.
-            </p>
-          </>
-        ) : (
-          <p className="mt-3 text-stone-700">You are opening a shared yearbook link.</p>
-        )}
-        <p className="mt-2 text-sm text-stone-500">
-          Yearbook link: <span className="font-semibold text-yearbook-ink">@{ownerUsername}</span>
-        </p>
-      </div>
+      {mode === "editor" ? (
+        <div className="mb-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yearbook-accent">
+            Sign a Yearbook
+          </p>
+          <h1 className="mt-2 text-3xl font-bold">Design your yearbook page</h1>
+          {recipientName ? (
+            <>
+              <h2 className="mt-4 text-2xl font-bold">{recipientName}</h2>
+              {recipientMeta ? <p className="text-sm text-stone-600">{recipientMeta}</p> : null}
+              <p className="mt-3 text-stone-700">
+                Design your page on the canvas below. Your signed page is permanent after you submit.
+              </p>
+              <p className="mt-3 text-xs font-semibold text-amber-800">
+                Once signed, this entry cannot be edited. You can preview and return to edit before
+                signing.
+              </p>
+            </>
+          ) : (
+            <p className="mt-3 text-stone-700">You are opening a shared yearbook link.</p>
+          )}
+          <p className="mt-2 text-sm text-stone-500">
+            Yearbook link: <span className="font-semibold text-yearbook-ink">@{ownerUsername}</span>
+          </p>
+        </div>
+      ) : null}
       {children}
     </main>
   );
