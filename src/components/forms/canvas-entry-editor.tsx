@@ -16,12 +16,14 @@ import {
   getCanvasSelectionOptions,
 } from "@/lib/canvas/selection-overlay";
 import { isNextNavigationError } from "@/lib/next/is-redirect-error";
+import { BOOK_HEIGHT, BOOK_WIDTH } from "@/components/yearbook/flipbook-viewer";
 import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
 
 configureCanvasSelectionOverlay();
 
-const PAGE_WIDTH = 595;
-const PAGE_HEIGHT = 842;
+/** Match yearbook page size so the editor WYSIWYG matches the signed page. */
+const PAGE_WIDTH = BOOK_WIDTH;
+const PAGE_HEIGHT = BOOK_HEIGHT;
 /** Rasterize the canvas above 72 DPI (~216 DPI at A4 when 3). */
 const PAGE_EXPORT_MULTIPLIER = 3;
 const PAGE_EXPORT_JPEG_QUALITY = 0.9;
@@ -75,6 +77,7 @@ export function CanvasEntryEditor({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [canvasReady, setCanvasReady] = useState(false);
 
   const updateHistoryButtons = useCallback(() => {
     setCanUndo(historyIndexRef.current > 0);
@@ -202,6 +205,7 @@ export function CanvasEntryEditor({
     fabricRef.current = canvas;
     bindCanvasEvents(canvas);
     pushHistory(canvas);
+    setCanvasReady(true);
 
     if (hasDraft(yearbookId)) {
       setShowDraftBanner(true);
@@ -210,6 +214,7 @@ export function CanvasEntryEditor({
     return () => {
       canvas.dispose();
       fabricRef.current = null;
+      setCanvasReady(false);
     };
   }, [bindCanvasEvents, isMobile, pushHistory, yearbookId]);
 
@@ -358,11 +363,14 @@ export function CanvasEntryEditor({
     image.set({
       scaleX,
       scaleY,
+      left: 0,
+      top: 0,
       originX: "left",
       originY: "top",
     });
 
     canvas.backgroundImage = image;
+    canvas.backgroundVpt = false;
     canvas.renderAll();
     pushHistory(canvas);
   }
@@ -562,8 +570,23 @@ export function CanvasEntryEditor({
         type="file"
       />
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-stone-200 bg-stone-100 p-4">
-        <canvas ref={canvasElementRef} />
+      <div className="canvas-editor-stage mt-6">
+        <p className="mb-3 text-center text-sm text-stone-600">
+          Edit your page below — this is what will appear in their yearbook.
+        </p>
+        <div
+          className="canvas-editor-stage__surface"
+          data-canvas-ready={canvasReady ? "true" : "false"}
+          style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT }}
+        >
+          {!canvasReady ? (
+            <div
+              aria-hidden
+              className="canvas-editor-stage__placeholder absolute inset-0 bg-white"
+            />
+          ) : null}
+          <canvas ref={canvasElementRef} />
+        </div>
       </div>
 
       <button

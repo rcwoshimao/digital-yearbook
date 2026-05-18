@@ -69,6 +69,34 @@ a {
     inset 0 0 0 19px rgba(0, 0, 0, 0.12);
 }
 
+/* Canvas entry editor — single centered page, no extra grey chrome */
+.canvas-editor-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.canvas-editor-stage__surface {
+  position: relative;
+  flex-shrink: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 2px dotted var(--yearbook-ink);
+  overflow: hidden;
+}
+
+/* Border lives on __surface so Fabric canvas pixels cannot paint over bottom/right edges */
+.canvas-editor-stage__surface .canvas-container {
+  margin: 0 auto !important;
+  border: none !important;
+}
+
+.canvas-editor-stage__surface[data-canvas-ready="false"] > canvas {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .yearbook-border-corner {
   background-image:
     linear-gradient(currentColor, currentColor),
