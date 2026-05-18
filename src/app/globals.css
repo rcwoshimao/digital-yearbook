@@ -69,6 +69,12 @@ a {
     inset 0 0 0 19px rgba(0, 0, 0, 0.12);
 }
 
+/* Reserved slot so selection toolbar never shifts the canvas */
+.selection-toolbar-slot {
+  min-height: 3.75rem;
+  margin-bottom: 1rem;
+}
+
 /* Canvas entry editor — single centered page, no extra grey chrome */
 .canvas-editor-stage {
   display: flex;

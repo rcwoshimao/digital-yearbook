@@ -62,6 +62,7 @@ export function CanvasEntryEditor({
   const compiledPageImageRef = useRef<Blob | null>(null);
 
   const [isMobile, setIsMobile] = useState(false);
+  const [selectionKind, setSelectionKind] = useState<"text" | "image" | null>(null);
   const [selectedText, setSelectedText] = useState<EditableText | null>(null);
   const [fontFamily, setFontFamily] = useState<string>(FONT_OPTIONS[0].value);
   const [fontSize, setFontSize] = useState(20);
@@ -145,6 +146,29 @@ export function CanvasEntryEditor({
     [pushHistory, selectedText],
   );
 
+  const deleteSelected = useCallback(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    const active = canvas.getActiveObject();
+    if (!active || !isDeletableCanvasObject(active)) {
+      return;
+    }
+
+    if (isEditableText(active) && active.isEditing) {
+      return;
+    }
+
+    canvas.remove(active);
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    setSelectionKind(null);
+    setSelectedText(null);
+    pushHistory(canvas);
+  }, [pushHistory]);
+
   const bindCanvasEvents = useCallback(
     (canvas: Canvas) => {
       const record = () => pushHistory(canvas);
@@ -168,14 +192,22 @@ export function CanvasEntryEditor({
         const active = canvas.getActiveObject();
         if (isEditableText(active)) {
           syncTextToolbar(active);
+          setSelectionKind("text");
+        } else if (isCanvasImage(active)) {
+          setSelectedText(null);
+          setSelectionKind("image");
         } else {
           setSelectedText(null);
+          setSelectionKind(null);
         }
       };
 
       canvas.on("selection:created", handleSelection);
       canvas.on("selection:updated", handleSelection);
-      canvas.on("selection:cleared", () => setSelectedText(null));
+      canvas.on("selection:cleared", () => {
+        setSelectedText(null);
+        setSelectionKind(null);
+      });
     },
     [pushHistory, syncTextToolbar],
   );
@@ -226,6 +258,40 @@ export function CanvasEntryEditor({
     const timer = window.setTimeout(() => setToastMessage(null), 4000);
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Delete" && event.key !== "Backspace") {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+
+      const canvas = fabricRef.current;
+      const active = canvas?.getActiveObject();
+      if (isEditableText(active) && active.isEditing) {
+        return;
+      }
+
+      if (!selectionKind) {
+        return;
+      }
+
+      event.preventDefault();
+      deleteSelected();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [deleteSelected, selectionKind]);
 
   useEffect(() => {
     if (!submitError) {
@@ -496,26 +562,12 @@ export function CanvasEntryEditor({
         </div>
       ) : null}
 
-      <Toolbar
+      <MainToolbar
         backgroundColor={backgroundColor}
         canRedo={canRedo}
         canUndo={canUndo}
-        fontFamily={fontFamily}
-        fontSize={fontSize}
         onAddImage={() => imageInputRef.current?.click()}
         onAddText={addText}
-        onFontFamilyChange={(value) => {
-          setFontFamily(value);
-          applyTextStyleUpdates({ fontFamily: value });
-        }}
-        onFontSizeChange={(value) => {
-          setFontSize(value);
-          applyTextStyleUpdates({ fontSize: value });
-        }}
-        onTextColorChange={(value) => {
-          setTextColor(value);
-          applyTextStyleUpdates({ fill: value });
-        }}
         onBackgroundColorChange={updateBackgroundColor}
         onBackgroundImage={() => backgroundInputRef.current?.click()}
         onClearBackgroundImage={clearBackgroundImage}
@@ -537,9 +589,29 @@ export function CanvasEntryEditor({
 
           void restoreHistory(canvas, historyIndexRef.current - 1);
         }}
-        selectedText={selectedText}
-        textColor={textColor}
       />
+
+      <div className="selection-toolbar-slot">
+        <SelectionToolbar
+          fontFamily={fontFamily}
+          fontSize={fontSize}
+          onDelete={deleteSelected}
+          onFontFamilyChange={(value) => {
+            setFontFamily(value);
+            applyTextStyleUpdates({ fontFamily: value });
+          }}
+          onFontSizeChange={(value) => {
+            setFontSize(value);
+            applyTextStyleUpdates({ fontSize: value });
+          }}
+          onTextColorChange={(value) => {
+            setTextColor(value);
+            applyTextStyleUpdates({ fill: value });
+          }}
+          selectionKind={selectionKind}
+          textColor={textColor}
+        />
+      </div>
 
       <input
         accept="image/*"
@@ -570,7 +642,7 @@ export function CanvasEntryEditor({
         type="file"
       />
 
-      <div className="canvas-editor-stage mt-6">
+      <div className="canvas-editor-stage">
         <p className="mb-3 text-center text-sm text-stone-600">
           Edit your page below — this is what will appear in their yearbook.
         </p>
@@ -725,49 +797,35 @@ export function CanvasEntryEditor({
   );
 }
 
-function Toolbar({
+function MainToolbar({
   backgroundColor,
   canRedo,
   canUndo,
-  fontFamily,
-  fontSize,
   onAddImage,
   onAddText,
   onBackgroundColorChange,
   onBackgroundImage,
   onClearBackgroundImage,
-  onFontFamilyChange,
-  onFontSizeChange,
   onRedo,
   onReset,
   onSaveDraft,
-  onTextColorChange,
   onUndo,
-  selectedText,
-  textColor,
 }: {
   backgroundColor: string;
   canRedo: boolean;
   canUndo: boolean;
-  fontFamily: string;
-  fontSize: number;
   onAddImage: () => void;
   onAddText: () => void;
   onBackgroundColorChange: (color: string) => void;
   onBackgroundImage: () => void;
   onClearBackgroundImage: () => void;
-  onFontFamilyChange: (value: string) => void;
-  onFontSizeChange: (value: number) => void;
   onRedo: () => void;
   onReset: () => void;
   onSaveDraft: () => void;
-  onTextColorChange: (value: string) => void;
   onUndo: () => void;
-  selectedText: EditableText | null;
-  textColor: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="mb-4 flex flex-wrap gap-3">
       <button
         className="rounded-full bg-yearbook-ink px-4 py-2 text-xs font-semibold text-white"
         onClick={onAddText}
@@ -836,8 +894,42 @@ function Toolbar({
         Save Draft
       </button>
 
-      {selectedText ? (
-        <div className="flex w-full flex-wrap items-center gap-3 rounded-2xl border border-stone-200 bg-yearbook-paper p-3">
+    </div>
+  );
+}
+
+
+function SelectionToolbar({
+  fontFamily,
+  fontSize,
+  onDelete,
+  onFontFamilyChange,
+  onFontSizeChange,
+  onTextColorChange,
+  selectionKind,
+  textColor,
+}: {
+  fontFamily: string;
+  fontSize: number;
+  onDelete: () => void;
+  onFontFamilyChange: (value: string) => void;
+  onFontSizeChange: (value: number) => void;
+  onTextColorChange: (value: string) => void;
+  selectionKind: "text" | "image" | null;
+  textColor: string;
+}) {
+  const isVisible = selectionKind !== null;
+
+  return (
+    <div
+      aria-hidden={!isVisible}
+      className={`flex min-h-[3.75rem] flex-wrap items-center gap-3 rounded-2xl border border-stone-200 bg-yearbook-paper p-3 transition-opacity ${
+        isVisible ? "opacity-100" : "pointer-events-none opacity-0"
+      }`}
+    >
+      {selectionKind === "text" ? (
+        <>
+          <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Text</p>
           <label className="text-xs font-semibold text-stone-700">
             Font
             <select
@@ -872,7 +964,19 @@ function Toolbar({
               value={textColor}
             />
           </label>
-        </div>
+        </>
+      ) : null}
+      {selectionKind === "image" ? (
+        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Image</p>
+      ) : null}
+      {isVisible ? (
+        <button
+          className="ml-auto rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-700"
+          onClick={onDelete}
+          type="button"
+        >
+          Delete
+        </button>
       ) : null}
     </div>
   );
@@ -893,6 +997,14 @@ function dataUrlToBlob(dataUrl: string) {
 
 function isEditableText(object: FabricObject | null | undefined): object is EditableText {
   return object instanceof Textbox || object instanceof IText;
+}
+
+function isCanvasImage(object: FabricObject | null | undefined): object is FabricImage {
+  return object instanceof FabricImage;
+}
+
+function isDeletableCanvasObject(object: FabricObject): object is EditableText | FabricImage {
+  return isEditableText(object) || isCanvasImage(object);
 }
 
 function normalizeFontFamily(value: string | undefined) {
