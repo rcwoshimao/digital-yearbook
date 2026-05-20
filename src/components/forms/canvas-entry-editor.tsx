@@ -17,6 +17,11 @@ import {
 } from "@/lib/canvas/selection-overlay";
 import { isNextNavigationError } from "@/lib/next/is-redirect-error";
 import { BOOK_HEIGHT, BOOK_WIDTH } from "@/components/yearbook/flipbook-viewer";
+import {
+  CANVAS_FONT_OPTIONS,
+  normalizeCanvasFontFamily,
+  preloadCanvasFonts,
+} from "@/lib/yearbook/canvas-fonts";
 import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
 
 configureCanvasSelectionOverlay();
@@ -31,13 +36,6 @@ const HISTORY_LIMIT = 30;
 const MOBILE_MAX_WIDTH = 767;
 
 const DEFAULT_TEXT_WIDTH = 320;
-
-const FONT_OPTIONS = [
-  { label: "Serif", value: "Georgia, 'Times New Roman', serif" },
-  { label: "Sans", value: "Arial, Helvetica, sans-serif" },
-  { label: "Mono", value: "'Courier New', Courier, monospace" },
-  { label: "Handwritten", value: "Caveat, cursive" },
-] as const;
 
 type EditableText = Textbox | IText;
 
@@ -64,7 +62,7 @@ export function CanvasEntryEditor({
   const [isMobile, setIsMobile] = useState(false);
   const [selectionKind, setSelectionKind] = useState<"text" | "image" | null>(null);
   const [selectedText, setSelectedText] = useState<EditableText | null>(null);
-  const [fontFamily, setFontFamily] = useState<string>(FONT_OPTIONS[0].value);
+  const [fontFamily, setFontFamily] = useState<string>(CANVAS_FONT_OPTIONS[0].value);
   const [fontSize, setFontSize] = useState(20);
   const [textColor, setTextColor] = useState<string>(YEARBOOK_THEME_FALLBACKS.ink);
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
@@ -116,6 +114,7 @@ export function CanvasEntryEditor({
       isRestoringRef.current = true;
 
       await canvas.loadFromJSON(snapshot);
+      fixCanvasTextFontFamilies(canvas);
       canvas.renderAll();
       historyIndexRef.current = index;
       updateHistoryButtons();
@@ -126,8 +125,15 @@ export function CanvasEntryEditor({
   );
 
   const syncTextToolbar = useCallback((active: EditableText) => {
+    const normalized = normalizeCanvasFontFamily(active.fontFamily);
+    if (normalized !== active.fontFamily) {
+      active.set({ fontFamily: normalized });
+      active.initDimensions();
+      fabricRef.current?.requestRenderAll();
+    }
+
     setSelectedText(active);
-    setFontFamily(normalizeFontFamily(active.fontFamily));
+    setFontFamily(normalized);
     setFontSize(active.fontSize ?? 20);
     setTextColor((active.fill as string) ?? YEARBOOK_THEME_FALLBACKS.ink);
   }, []);
@@ -227,24 +233,35 @@ export function CanvasEntryEditor({
       return;
     }
 
-    const canvas = new Canvas(canvasElementRef.current, {
-      width: PAGE_WIDTH,
-      height: PAGE_HEIGHT,
-      backgroundColor: "#ffffff",
-      ...getCanvasSelectionOptions(),
-    });
+    let disposed = false;
 
-    fabricRef.current = canvas;
-    bindCanvasEvents(canvas);
-    pushHistory(canvas);
-    setCanvasReady(true);
+    void (async () => {
+      await preloadCanvasFonts();
 
-    if (hasDraft(yearbookId)) {
-      setShowDraftBanner(true);
-    }
+      if (disposed || !canvasElementRef.current) {
+        return;
+      }
+
+      const canvas = new Canvas(canvasElementRef.current, {
+        width: PAGE_WIDTH,
+        height: PAGE_HEIGHT,
+        backgroundColor: "#ffffff",
+        ...getCanvasSelectionOptions(),
+      });
+
+      fabricRef.current = canvas;
+      bindCanvasEvents(canvas);
+      pushHistory(canvas);
+      setCanvasReady(true);
+
+      if (hasDraft(yearbookId)) {
+        setShowDraftBanner(true);
+      }
+    })();
 
     return () => {
-      canvas.dispose();
+      disposed = true;
+      fabricRef.current?.dispose();
       fabricRef.current = null;
       setCanvasReady(false);
     };
@@ -330,6 +347,7 @@ export function CanvasEntryEditor({
 
       isRestoringRef.current = true;
       await canvas.loadFromJSON(hydrated);
+      fixCanvasTextFontFamilies(canvas);
       canvas.renderAll();
       pushHistory(canvas);
 
@@ -937,7 +955,7 @@ function SelectionToolbar({
               onChange={(event) => onFontFamilyChange(event.target.value)}
               value={fontFamily}
             >
-              {FONT_OPTIONS.map((option) => (
+              {CANVAS_FONT_OPTIONS.map((option) => (
                 <option key={option.label} value={option.value}>
                   {option.label}
                 </option>
@@ -1007,28 +1025,18 @@ function isDeletableCanvasObject(object: FabricObject): object is EditableText |
   return isEditableText(object) || isCanvasImage(object);
 }
 
-function normalizeFontFamily(value: string | undefined) {
-  if (!value) {
-    return FONT_OPTIONS[0].value;
-  }
+function fixCanvasTextFontFamilies(canvas: Canvas) {
+  for (const object of canvas.getObjects()) {
+    if (!isEditableText(object)) {
+      continue;
+    }
 
-  const lowered = value.toLowerCase();
-  if (lowered.includes("caveat") || lowered.includes("--font-caveat")) {
-    return FONT_OPTIONS[3].value;
-  }
-
-  for (const option of FONT_OPTIONS) {
-    const primary = option.value
-      .split(",")[0]
-      .replace(/['"]/g, "")
-      .trim()
-      .toLowerCase();
-    if (lowered.includes(primary)) {
-      return option.value;
+    const normalized = normalizeCanvasFontFamily(object.fontFamily);
+    if (normalized !== object.fontFamily) {
+      object.set({ fontFamily: normalized });
+      object.initDimensions();
     }
   }
-
-  return value;
 }
 
 function applyTextStylesToObject(

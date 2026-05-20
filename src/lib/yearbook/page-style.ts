@@ -1,3 +1,4 @@
+import { canvasFontCaveat } from "@/lib/yearbook/canvas-fonts";
 import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
 
 export type YearbookPagePattern = "none" | "lined" | "dotted" | "grid";
@@ -60,7 +61,7 @@ export const borderOptions = [
 
 export const fontFamilyByStyle: Record<YearbookPageFont, string> = {
   serif: "Georgia, serif",
-  handwritten: "var(--font-caveat), cursive",
+  handwritten: `${canvasFontCaveat.style.fontFamily}, cursive`,
   mono: "'Courier New', monospace",
 };
 

@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { Caveat } from "next/font/google";
+import {
+  canvasFontGoogleStylesheetHref,
+  canvasFontVariables,
+  EXTERNAL_FONT_FAMILIES,
+} from "@/lib/yearbook/canvas-fonts";
 import "./globals.css";
-
-const caveat = Caveat({
-  subsets: ["latin"],
-  variable: "--font-caveat",
-});
 
 export const metadata: Metadata = {
   title: "Digital Graduation Yearbook",
@@ -19,7 +18,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={caveat.variable}>{children}</body>
+      <head>
+        {EXTERNAL_FONT_FAMILIES.length > 0 ? (
+          <link rel="stylesheet" href={canvasFontGoogleStylesheetHref} />
+        ) : null}
+      </head>
+      <body className={canvasFontVariables}>{children}</body>
     </html>
   );
 }
