@@ -214,6 +214,15 @@ export function CanvasEntryEditor({
         setSelectedText(null);
         setSelectionKind(null);
       });
+
+      canvas.on("text:editing:exited", (event) => {
+        const target = event.target;
+        if (!isEditableText(target)) {
+          return;
+        }
+
+        syncTextObjectCharacterStyles(target);
+      });
     },
     [pushHistory, syncTextToolbar],
   );
@@ -404,6 +413,7 @@ export function CanvasEntryEditor({
       lockScalingY: true,
     });
 
+    applyTextStylesToObject(text, { fontFamily, fontSize, fill: textColor });
     canvas.add(text);
     canvas.setActiveObject(text);
     canvas.renderAll();
@@ -1031,12 +1041,17 @@ function fixCanvasTextFontFamilies(canvas: Canvas) {
       continue;
     }
 
-    const normalized = normalizeCanvasFontFamily(object.fontFamily);
-    if (normalized !== object.fontFamily) {
-      object.set({ fontFamily: normalized });
-      object.initDimensions();
-    }
+    syncTextObjectCharacterStyles(object);
   }
+}
+
+/** Fabric stores per-character styles; object-level font/size/fill must be copied to every grapheme for multiline text. */
+function syncTextObjectCharacterStyles(text: EditableText) {
+  const fontFamily = normalizeCanvasFontFamily(text.fontFamily);
+  const fontSize = text.fontSize ?? 20;
+  const fill = (text.fill as string) ?? YEARBOOK_THEME_FALLBACKS.ink;
+
+  applyTextStylesToObject(text, { fontFamily, fontSize, fill });
 }
 
 function applyTextStylesToObject(
@@ -1044,6 +1059,12 @@ function applyTextStylesToObject(
   styles: { fontFamily?: string; fontSize?: number; fill?: string },
 ) {
   text.set(styles);
+
+  const length = text.text?.length ?? 0;
+  if (length > 0) {
+    text.setSelectionStyles(styles, 0, length);
+  }
+
   text.initDimensions();
   text.setCoords();
 }
