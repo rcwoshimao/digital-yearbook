@@ -2,7 +2,7 @@
 
 The canvas editor rasterizes each page as a **JPEG** and uploads it to Supabase Storage (`entry-pdfs` bucket) at `{yearbookId}/{userId}.jpg`. The path is stored on the entry as `page_image_url`.
 
-Use these steps after changing export settings in `src/components/forms/canvas-entry-editor.tsx` (`compilePagePreview`).
+Use these steps after changing export settings in `src/lib/canvas/page-export.ts` (preview vs submit profiles) or `compilePagePreview` / `signYearbook` in `src/components/forms/canvas-entry-editor.tsx`.
 
 ---
 
@@ -61,5 +61,6 @@ For JPEG pages, `pdfimages -list` on an exported yearbook PDF should show `jpeg`
 
 ## Reference
 
-- Export: `compilePagePreview` in `src/components/forms/canvas-entry-editor.tsx` — `format: "jpeg"`, `PAGE_EXPORT_MULTIPLIER`, `PAGE_EXPORT_JPEG_QUALITY`.
+- Preview export: `PAGE_PREVIEW_EXPORT` in `src/lib/canvas/page-export.ts` (used by `compilePagePreview`).
+- Submit export: `PAGE_SUBMIT_EXPORT` and `exportPageImageForSubmit` (used by `signYearbook`; re-rasterizes from the live canvas, not the preview blob).
 - Upload: `submitCanvasEntry` in `src/app/yearbook/[yearbookId]/write/actions.ts` (`MAX_PAGE_IMAGE_SIZE` = 10 MB).

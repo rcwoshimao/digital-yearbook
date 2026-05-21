@@ -12,6 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { clearDraft, hasDraft, loadDraftCanvas, saveDraft } from "@/lib/canvas/draft-store";
 import {
+  exportPageImage,
+  exportPageImageForSubmit,
+  PAGE_PREVIEW_EXPORT,
+} from "@/lib/canvas/page-export";
+import {
   configureCanvasSelectionOverlay,
   getCanvasSelectionOptions,
 } from "@/lib/canvas/selection-overlay";
@@ -23,15 +28,13 @@ import {
   preloadCanvasFonts,
 } from "@/lib/yearbook/canvas-fonts";
 import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
+import { StickerPickerDialog } from "@/components/forms/sticker-picker-dialog";
 
 configureCanvasSelectionOverlay();
 
 /** Match yearbook page size so the editor WYSIWYG matches the signed page. */
 const PAGE_WIDTH = BOOK_WIDTH;
 const PAGE_HEIGHT = BOOK_HEIGHT;
-/** Rasterize the canvas above 72 DPI (~216 DPI at A4 when 3). */
-const PAGE_EXPORT_MULTIPLIER = 3;
-const PAGE_EXPORT_JPEG_QUALITY = 0.9;
 const HISTORY_LIMIT = 30;
 const MOBILE_MAX_WIDTH = 767;
 
@@ -57,7 +60,7 @@ export function CanvasEntryEditor({
   const isRestoringRef = useRef(false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const backgroundInputRef = useRef<HTMLInputElement | null>(null);
-  const compiledPageImageRef = useRef<Blob | null>(null);
+  const hasPreviewedRef = useRef(false);
 
   const [isMobile, setIsMobile] = useState(false);
   const [selectionKind, setSelectionKind] = useState<"text" | "image" | null>(null);
@@ -73,6 +76,7 @@ export function CanvasEntryEditor({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [stickerPickerOpen, setStickerPickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -512,13 +516,8 @@ export function CanvasEntryEditor({
       return;
     }
 
-    const dataUrl = canvas.toDataURL({
-      format: "jpeg",
-      quality: PAGE_EXPORT_JPEG_QUALITY,
-      multiplier: PAGE_EXPORT_MULTIPLIER,
-    });
-    const blob = dataUrlToBlob(dataUrl);
-    compiledPageImageRef.current = blob;
+    const blob = exportPageImage(canvas, PAGE_PREVIEW_EXPORT);
+    hasPreviewedRef.current = true;
 
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -531,8 +530,8 @@ export function CanvasEntryEditor({
   }
 
   async function signYearbook() {
-    const pageImageBlob = compiledPageImageRef.current;
-    if (!pageImageBlob) {
+    const canvas = fabricRef.current;
+    if (!canvas || !hasPreviewedRef.current) {
       setToastMessage("Preview your page before signing.");
       return;
     }
@@ -540,6 +539,7 @@ export function CanvasEntryEditor({
     setIsSubmitting(true);
 
     try {
+      const pageImageBlob = exportPageImageForSubmit(canvas);
       const formData = new FormData();
       formData.set("yearbookId", yearbookId);
       formData.set("ownerUsername", ownerUsername);
@@ -1008,19 +1008,6 @@ function SelectionToolbar({
       ) : null}
     </div>
   );
-}
-
-function dataUrlToBlob(dataUrl: string) {
-  const [header, base64] = dataUrl.split(",");
-  const mime = header?.match(/:(.*?);/)?.[1] ?? "image/jpeg";
-  const binary = atob(base64 ?? "");
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return new Blob([bytes], { type: mime });
 }
 
 function isEditableText(object: FabricObject | null | undefined): object is EditableText {
