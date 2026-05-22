@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ProfileSettingsForm } from "@/components/profile/profile-settings-form";
 import { ShareControls } from "@/components/yearbook/share-controls";
-import { FlashBanner } from "@/components/ui/flash-banner";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { getPrimaryAuthLabel, usesGoogleAuth } from "@/lib/auth/providers";
@@ -13,10 +12,6 @@ type ProfilePageProps = {
   params: {
     username: string;
   };
-  searchParams: {
-    profile_error?: string;
-    profile_message?: string;
-  };
 };
 
 type YearbookRow = {
@@ -24,7 +19,7 @@ type YearbookRow = {
   share_mode: "link" | "invite_only";
 };
 
-export default async function ProfilePage({ params, searchParams }: ProfilePageProps) {
+export default async function ProfilePage({ params }: ProfilePageProps) {
   const slug = normalizeUsername(params.username);
 
   if (!hasSupabaseEnv) {
@@ -123,12 +118,6 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
 
   return (
     <DashboardShell profileUsername={profile.username} userName={profile.display_name}>
-      {searchParams.profile_error ? (
-        <FlashBanner message={searchParams.profile_error} tone="error" />
-      ) : null}
-      {searchParams.profile_message ? (
-        <FlashBanner message={searchParams.profile_message} tone="success" />
-      ) : null}
       <div className="space-y-8">
         <ProfileSettingsForm
           authLabel={getPrimaryAuthLabel(user)}

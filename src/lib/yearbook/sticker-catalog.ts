@@ -361,14 +361,33 @@ const STICKER_PACK_FILES: {
   }
 ];
 
-export const STICKER_PACKS: StickerPack[] = STICKER_PACK_FILES.map((pack) => ({
+/** Packs listed first in the sticker picker; all others keep catalog order below. */
+const STICKER_PACK_PRIORITY = ["gift", "school", "nature", "oops"] as const;
+
+const STICKER_PACK_CATALOG_ORDER = STICKER_PACK_FILES.map((pack) => pack.slug);
+
+function stickerPackSortIndex(slug: string): number {
+  const priorityIndex = STICKER_PACK_PRIORITY.indexOf(slug as (typeof STICKER_PACK_PRIORITY)[number]);
+  if (priorityIndex >= 0) {
+    return priorityIndex;
+  }
+
+  return (
+    STICKER_PACK_PRIORITY.length +
+    STICKER_PACK_CATALOG_ORDER.indexOf(slug)
+  );
+}
+
+export const STICKER_PACKS: StickerPack[] = [...STICKER_PACK_FILES]
+  .sort((a, b) => stickerPackSortIndex(a.slug) - stickerPackSortIndex(b.slug))
+  .map((pack) => ({
   slug: pack.slug,
   title: pack.title,
   attribution: pack.attribution,
   creditUrl: pack.creditUrl,
-  stickers: pack.files.map((filename) => ({
-    id: `${pack.slug}/${filename}`,
-    src: stickerSrc(pack.slug, filename),
-    alt: stickerAlt(filename),
-  })),
-}));
+    stickers: pack.files.map((filename) => ({
+      id: `${pack.slug}/${filename}`,
+      src: stickerSrc(pack.slug, filename),
+      alt: stickerAlt(filename),
+    })),
+  }));

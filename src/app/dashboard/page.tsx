@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { FlashBanner } from "@/components/ui/flash-banner";
 import { PdfExportButton } from "@/components/yearbook/pdf-export-button";
 import { ShareControls } from "@/components/yearbook/share-controls";
 import { YearbookFlipbook } from "@/components/yearbook/yearbook-flipbook";
@@ -10,13 +9,6 @@ import type { YearbookEntry } from "@/lib/types/yearbook";
 import { ENTRY_SELECT, type EntryRow, mapEntryRow, signEntryRowAssets } from "@/lib/yearbook/entries";
 import { loadYearbookInvites } from "@/lib/yearbook/invites";
 
-type DashboardPageProps = {
-  searchParams: {
-    dashboard_error?: string;
-    signed?: string;
-  };
-};
-
 type YearbookRow = {
   id: string;
   owner_id: string;
@@ -24,7 +16,7 @@ type YearbookRow = {
   created_at: string;
 };
 
-export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+export default async function DashboardPage() {
   if (!hasSupabaseEnv) {
     return (
       <DashboardShell>
@@ -106,12 +98,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <DashboardShell profileUsername={profile?.username} userName={ownerName}>
-      {searchParams.signed ? (
-        <FlashBanner message="You've signed the yearbook!" tone="success-emphasis" />
-      ) : null}
-      {searchParams.dashboard_error ? (
-        <FlashBanner message={searchParams.dashboard_error} tone="error" />
-      ) : null}
       <section className="space-y-6">
         <YearbookFlipbook
           entries={receivedEntries}

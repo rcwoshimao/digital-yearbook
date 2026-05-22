@@ -1,38 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn, signUp } from "@/app/auth/actions";
 import { GoogleSignInButton } from "@/components/forms/google-sign-in-button";
+import { useNotification } from "@/components/providers/notification-provider";
 
 type AuthFormProps = {
-  authError?: string;
-  authMessage?: string;
   isConfigured: boolean;
   showDevEmailAuth: boolean;
 };
 
-export function AuthForm({
-  authError,
-  authMessage,
-  isConfigured,
-  showDevEmailAuth,
-}: AuthFormProps) {
+export function AuthForm({ isConfigured, showDevEmailAuth }: AuthFormProps) {
   const [showEmailAuth, setShowEmailAuth] = useState(false);
+  const { notifyInfo } = useNotification();
+
+  useEffect(() => {
+    if (!isConfigured) {
+      notifyInfo("Add Supabase environment variables in `.env.local` to enable sign in.");
+    }
+  }, [isConfigured, notifyInfo]);
 
   return (
     <div className="rounded-[2rem] bg-white/85 p-6 shadow-xl shadow-yearbook-accent/10 ring-1 ring-white/70 backdrop-blur">
-      {!isConfigured ? (
-        <p className="mb-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
-          Add Supabase environment variables in `.env.local` to enable sign in.
-        </p>
-      ) : null}
-      {authError ? (
-        <p className="mb-4 rounded-2xl bg-red-50 p-4 text-sm text-red-700">{authError}</p>
-      ) : null}
-      {authMessage ? (
-        <p className="mb-4 rounded-2xl bg-green-50 p-4 text-sm text-green-700">{authMessage}</p>
-      ) : null}
-
       <div className="space-y-4">
         <div>
           <h2 className="text-2xl font-bold">Continue with Google</h2>
@@ -126,7 +115,6 @@ function EmailPasswordAuth({ isConfigured }: { isConfigured: boolean }) {
           <AuthField label="Password" name="password" type="password" />
           <button
             className="w-full rounded-full bg-yearbook-accent px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!isConfigured}
             type="submit"
           >
             Create account with email

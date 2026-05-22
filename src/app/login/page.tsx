@@ -5,14 +5,7 @@ import { hasDevEmailAuth } from "@/lib/auth/dev";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
-type LoginPageProps = {
-  searchParams: {
-    auth_error?: string;
-    auth_message?: string;
-  };
-};
-
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default async function LoginPage() {
   if (hasSupabaseEnv) {
     const supabase = createClient();
     const {
@@ -45,12 +38,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </div>
 
         <div className="w-full max-w-2xl">
-          <AuthForm
-            authError={searchParams.auth_error}
-            authMessage={searchParams.auth_message}
-            isConfigured={hasSupabaseEnv}
-            showDevEmailAuth={hasDevEmailAuth}
-          />
+          <AuthForm isConfigured={hasSupabaseEnv} showDevEmailAuth={hasDevEmailAuth} />
         </div>
 
         <Link className="text-sm font-semibold text-yearbook-accent" href="/dashboard">

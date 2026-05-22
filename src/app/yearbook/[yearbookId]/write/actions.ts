@@ -127,5 +127,5 @@ export async function submitCanvasEntry(formData: FormData) {
     redirect(writeErrorUrl(ownerUsername, message));
   }
 
-  redirect("/dashboard?signed=1");
+  redirect("/write?signed=1");
 }

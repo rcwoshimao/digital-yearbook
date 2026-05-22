@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AppProviders } from "@/components/providers/app-providers";
 import {
   canvasFontGoogleStylesheetHref,
   canvasFontVariables,
@@ -23,7 +24,9 @@ export default function RootLayout({
           <link rel="stylesheet" href={canvasFontGoogleStylesheetHref} />
         ) : null}
       </head>
-      <body className={canvasFontVariables}>{children}</body>
+      <body className={canvasFontVariables}>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { addInvite, revokeInvite, updateShareMode } from "@/app/dashboard/actions";
+import { useNotification } from "@/components/providers/notification-provider";
 import type { YearbookInvite } from "@/lib/types/yearbook";
 
 type ShareControlsProps = {
@@ -21,13 +21,12 @@ export function ShareControls({
   shareMode,
   yearbookId,
 }: ShareControlsProps) {
-  const [copyMessage, setCopyMessage] = useState("");
+  const { notifySuccess } = useNotification();
   const shareUrl = `${appUrl}/write/${ownerUsername}`;
 
   async function copyLink() {
     await navigator.clipboard.writeText(shareUrl);
-    setCopyMessage("Link copied!");
-    window.setTimeout(() => setCopyMessage(""), 1800);
+    notifySuccess("Link copied!");
   }
 
   return (
@@ -54,7 +53,6 @@ export function ShareControls({
         {shareMode === "invite_only" ? (
           <p className="mt-2 text-xs text-stone-600">Only people you&apos;ve invited can use this link.</p>
         ) : null}
-        {copyMessage ? <p className="mt-2 text-sm font-semibold text-green-700">{copyMessage}</p> : null}
       </div>
 
       <form action={addInvite} className="rounded-2xl border border-stone-200 p-4">

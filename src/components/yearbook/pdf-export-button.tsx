@@ -2,6 +2,7 @@
 
 import { jsPDF } from "jspdf";
 import { useRef, useState } from "react";
+import { useNotification } from "@/components/providers/notification-provider";
 import { BookPage } from "@/components/yearbook/book-page";
 import { EntryPageContent } from "@/components/yearbook/entry-page-content";
 import { BOOK_HEIGHT, BOOK_WIDTH } from "@/components/yearbook/flipbook-viewer";
@@ -32,6 +33,7 @@ export function PdfExportButton({
 }: PdfExportButtonProps) {
   const exportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const { notifyError, notifySuccess } = useNotification();
 
   const classLabel = ownerClass ? `Class of ${ownerClass}` : "Class Memories";
   const domExportEntries = entries.filter((entry) => !entry.pageImageUrl);
@@ -47,10 +49,14 @@ export function PdfExportButton({
     try {
       const pdf = await buildYearbookPdf(root, entries);
       if (!pdf) {
+        notifyError("Could not export PDF. Try again in a moment.");
         return;
       }
 
       pdf.save(`yearbook-${slugify(ownerName)}-${new Date().getFullYear()}.pdf`);
+      notifySuccess("PDF downloaded.");
+    } catch {
+      notifyError("Could not export PDF. Try again in a moment.");
     } finally {
       setIsExporting(false);
     }

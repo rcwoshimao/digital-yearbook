@@ -29,6 +29,7 @@ import {
 } from "@/lib/yearbook/canvas-fonts";
 import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
 import { StickerPickerDialog } from "@/components/forms/sticker-picker-dialog";
+import { useNotification } from "@/components/providers/notification-provider";
 
 configureCanvasSelectionOverlay();
 
@@ -44,15 +45,11 @@ type EditableText = Textbox | IText;
 
 type CanvasEntryEditorProps = {
   ownerUsername: string;
-  submitError?: string | null;
   yearbookId: string;
 };
 
-export function CanvasEntryEditor({
-  ownerUsername,
-  submitError = null,
-  yearbookId,
-}: CanvasEntryEditorProps) {
+export function CanvasEntryEditor({ ownerUsername, yearbookId }: CanvasEntryEditorProps) {
+  const { notifyError, notifySuccess } = useNotification();
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const fabricRef = useRef<Canvas | null>(null);
   const historyRef = useRef<string[]>([]);
@@ -70,7 +67,6 @@ export function CanvasEntryEditor({
   const [textColor, setTextColor] = useState<string>(YEARBOOK_THEME_FALLBACKS.ink);
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
   const [showDraftBanner, setShowDraftBanner] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [compileDialogOpen, setCompileDialogOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -281,15 +277,6 @@ export function CanvasEntryEditor({
   }, [bindCanvasEvents, isMobile, pushHistory, yearbookId]);
 
   useEffect(() => {
-    if (!toastMessage) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => setToastMessage(null), 4000);
-    return () => window.clearTimeout(timer);
-  }, [toastMessage]);
-
-  useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Delete" && event.key !== "Backspace") {
         return;
@@ -324,18 +311,6 @@ export function CanvasEntryEditor({
   }, [deleteSelected, selectionKind]);
 
   useEffect(() => {
-    if (!submitError) {
-      return;
-    }
-
-    setIsSubmitting(false);
-    setConfirmOpen(false);
-    setPreviewOpen(false);
-    setCompileDialogOpen(false);
-    setToastMessage(submitError);
-  }, [submitError]);
-
-  useEffect(() => {
     return () => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -354,7 +329,7 @@ export function CanvasEntryEditor({
       const hydrated = await loadDraftCanvas(yearbookId);
       if (!hydrated) {
         setShowDraftBanner(false);
-        setToastMessage("Could not restore the saved draft.");
+        notifyError("Could not restore the saved draft.");
         return;
       }
 
@@ -370,11 +345,11 @@ export function CanvasEntryEditor({
       }
 
       setShowDraftBanner(false);
-      setToastMessage("Draft restored.");
+      notifySuccess("Draft restored.");
     } catch {
       await clearDraft(yearbookId);
       setShowDraftBanner(false);
-      setToastMessage("Could not restore the saved draft.");
+      notifyError("Could not restore the saved draft.");
     } finally {
       isRestoringRef.current = false;
     }
@@ -394,9 +369,9 @@ export function CanvasEntryEditor({
     try {
       const canvasJson = canvas.toJSON() as Record<string, unknown>;
       await saveDraft(yearbookId, canvasJson);
-      setToastMessage("Draft saved.");
+      notifySuccess("Draft saved.");
     } catch {
-      setToastMessage("Could not save draft. Your browser storage may be full.");
+      notifyError("Could not save draft. Your browser storage may be full.");
     }
   }
 
@@ -423,16 +398,14 @@ export function CanvasEntryEditor({
     canvas.renderAll();
   }
 
-  async function addImageFromFile(file: File) {
+  async function addImageToCanvas(src: string, maxWidthRatio: number) {
     const canvas = fabricRef.current;
-    if (!canvas || !file.type.startsWith("image/")) {
+    if (!canvas) {
       return;
     }
 
-    const dataUrl = await readFileAsDataUrl(file);
-    const image = await FabricImage.fromURL(dataUrl);
-
-    const maxWidth = PAGE_WIDTH * 0.6;
+    const image = await FabricImage.fromURL(src);
+    const maxWidth = PAGE_WIDTH * maxWidthRatio;
     if ((image.width ?? 0) > maxWidth) {
       image.scaleToWidth(maxWidth);
     }
@@ -445,6 +418,19 @@ export function CanvasEntryEditor({
     canvas.add(image);
     canvas.setActiveObject(image);
     canvas.renderAll();
+  }
+
+  async function addImageFromFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      return;
+    }
+
+    const dataUrl = await readFileAsDataUrl(file);
+    await addImageToCanvas(dataUrl, 0.6);
+  }
+
+  async function addStickerFromUrl(src: string) {
+    await addImageToCanvas(src, 0.28);
   }
 
   async function setBackgroundImageFromFile(file: File) {
@@ -532,7 +518,7 @@ export function CanvasEntryEditor({
   async function signYearbook() {
     const canvas = fabricRef.current;
     if (!canvas || !hasPreviewedRef.current) {
-      setToastMessage("Preview your page before signing.");
+      notifyError("Preview your page before signing.");
       return;
     }
 
@@ -551,7 +537,7 @@ export function CanvasEntryEditor({
         throw error;
       }
 
-      setToastMessage("Could not submit your entry. Please try again.");
+      notifyError("Could not submit your entry. Please try again.");
       setIsSubmitting(false);
     }
   }
@@ -595,6 +581,7 @@ export function CanvasEntryEditor({
         canRedo={canRedo}
         canUndo={canUndo}
         onAddImage={() => imageInputRef.current?.click()}
+        onAddStickers={() => setStickerPickerOpen(true)}
         onAddText={addText}
         onBackgroundColorChange={updateBackgroundColor}
         onBackgroundImage={() => backgroundInputRef.current?.click()}
@@ -617,6 +604,12 @@ export function CanvasEntryEditor({
 
           void restoreHistory(canvas, historyIndexRef.current - 1);
         }}
+      />
+
+      <StickerPickerDialog
+        onOpenChange={setStickerPickerOpen}
+        onSelectSticker={(src) => void addStickerFromUrl(src)}
+        open={stickerPickerOpen}
       />
 
       <div className="selection-toolbar-slot">
@@ -696,12 +689,6 @@ export function CanvasEntryEditor({
       >
         Preview page
       </button>
-
-      {toastMessage ? (
-        <p className="mt-4 rounded-2xl bg-stone-900 px-4 py-3 text-sm font-semibold text-white">
-          {toastMessage}
-        </p>
-      ) : null}
 
       <Dialog open={compileDialogOpen} onOpenChange={setCompileDialogOpen}>
         <DialogContent>
@@ -830,6 +817,7 @@ function MainToolbar({
   canRedo,
   canUndo,
   onAddImage,
+  onAddStickers,
   onAddText,
   onBackgroundColorChange,
   onBackgroundImage,
@@ -843,6 +831,7 @@ function MainToolbar({
   canRedo: boolean;
   canUndo: boolean;
   onAddImage: () => void;
+  onAddStickers: () => void;
   onAddText: () => void;
   onBackgroundColorChange: (color: string) => void;
   onBackgroundImage: () => void;
@@ -867,6 +856,13 @@ function MainToolbar({
         type="button"
       >
         Add Image
+      </button>
+      <button
+        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700"
+        onClick={onAddStickers}
+        type="button"
+      >
+        Stickers
       </button>
       <label className="flex items-center gap-2 text-xs font-semibold text-stone-700">
         Background

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useNotification } from "@/components/providers/notification-provider";
 
 type GoogleSignInButtonProps = {
   disabled?: boolean;
@@ -15,11 +16,10 @@ export function GoogleSignInButton({
   nextPath = "/dashboard",
 }: GoogleSignInButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { notifyError } = useNotification();
 
   async function signInWithGoogle() {
     setIsLoading(true);
-    setErrorMessage(null);
 
     try {
       const supabase = createClient();
@@ -32,7 +32,7 @@ export function GoogleSignInButton({
       });
 
       if (error) {
-        setErrorMessage(error.message);
+        notifyError(error.message);
         setIsLoading(false);
         return;
       }
@@ -42,11 +42,11 @@ export function GoogleSignInButton({
         return;
       }
 
-      setErrorMessage("Could not get Google sign-in URL. Check Supabase Google provider settings.");
+      notifyError("Could not get Google sign-in URL. Check Supabase Google provider settings.");
       setIsLoading(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      setErrorMessage(
+      notifyError(
         message.includes("Supabase")
           ? message
           : `Could not start Google sign-in: ${message}`,
@@ -56,18 +56,15 @@ export function GoogleSignInButton({
   }
 
   return (
-    <div className="space-y-2">
-      <button
-        className="flex w-full items-center justify-center gap-3 rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 shadow-sm transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={disabled || isLoading}
-        onClick={() => void signInWithGoogle()}
-        type="button"
-      >
-        <GoogleIcon />
-        {isLoading ? "Redirecting to Google…" : label}
-      </button>
-      {errorMessage ? <p className="text-sm text-red-700">{errorMessage}</p> : null}
-    </div>
+    <button
+      className="flex w-full items-center justify-center gap-3 rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 shadow-sm transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+      disabled={disabled || isLoading}
+      onClick={() => void signInWithGoogle()}
+      type="button"
+    >
+      <GoogleIcon />
+      {isLoading ? "Redirecting to Google…" : label}
+    </button>
   );
 }
 

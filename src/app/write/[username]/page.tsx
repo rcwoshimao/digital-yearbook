@@ -13,12 +13,9 @@ type WriteEntryPageProps = {
   params: {
     username: string;
   };
-  searchParams: {
-    entry_error?: string;
-  };
 };
 
-export default async function WriteEntryPage({ params, searchParams }: WriteEntryPageProps) {
+export default async function WriteEntryPage({ params }: WriteEntryPageProps) {
   const slug = normalizeUsername(params.username);
 
   if (!hasSupabaseEnv) {
@@ -182,11 +179,7 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
       recipientMeta={recipientMeta}
       recipientName={recipientName}
     >
-      <CanvasEntryEditor
-        ownerUsername={ownerProfile.username}
-        submitError={searchParams.entry_error}
-        yearbookId={yearbook.id}
-      />
+      <CanvasEntryEditor ownerUsername={ownerProfile.username} yearbookId={yearbook.id} />
     </WritePageShell>
   );
 }

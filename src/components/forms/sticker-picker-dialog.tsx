@@ -23,7 +23,7 @@ export function StickerPickerDialog({
 }: StickerPickerDialogProps) {
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="w-[min(92vw,36rem)]">
+      <DialogContent className="w-[min(92vw,42rem)]">
         <DialogHeader>
           <DialogTitle>Stickers</DialogTitle>
           <DialogDescription>
@@ -46,11 +46,11 @@ export function StickerPickerDialog({
                   {pack.attribution}
                 </a>
               </p>
-              <ul className="mt-3 flex flex-wrap gap-2">
+              <ul className="mt-3 flex flex-wrap gap-3">
                 {pack.stickers.map((sticker) => (
                   <li key={sticker.id}>
                     <button
-                      className="flex h-16 w-16 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 p-1 transition hover:border-yearbook-accent hover:bg-white"
+                      className="flex h-28 w-28 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 p-2 transition hover:border-yearbook-accent hover:bg-white"
                       onClick={() => {
                         onSelectSticker(sticker.src);
                         onOpenChange(false);
@@ -61,10 +61,10 @@ export function StickerPickerDialog({
                       <Image
                         alt={sticker.alt}
                         className="max-h-full max-w-full object-contain"
-                        height={56}
+                        height={96}
                         src={sticker.src}
                         unoptimized
-                        width={56}
+                        width={96}
                       />
                     </button>
                   </li>
