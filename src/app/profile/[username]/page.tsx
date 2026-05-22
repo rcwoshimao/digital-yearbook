@@ -4,6 +4,7 @@ import { ProfileSettingsForm } from "@/components/profile/profile-settings-form"
 import { ShareControls } from "@/components/yearbook/share-controls";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { isDevFeaturesEnabled } from "@/lib/auth/dev";
 import { getPrimaryAuthLabel, usesGoogleAuth } from "@/lib/auth/providers";
 import { loadYearbookInvites } from "@/lib/yearbook/invites";
 import { isUuid, normalizeUsername } from "@/lib/username";
@@ -76,9 +77,18 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           </p>
           <h1 className="mt-2 text-3xl font-bold">Your account is still being set up</h1>
           <p className="mt-3 max-w-2xl text-stone-700">
-            We could not find a profile record for this account yet. Run{" "}
-            <code className="rounded bg-stone-100 px-1">supabase/dev_seed.sql</code> in the SQL
-            editor, or sign up through the app.
+            {isDevFeaturesEnabled ? (
+              <>
+                We could not find a profile record for this account yet. Run{" "}
+                <code className="rounded bg-stone-100 px-1">supabase/dev_seed.sql</code> in the SQL
+                editor, or sign up through the app.
+              </>
+            ) : (
+              <>
+                We could not find a profile record for this account yet. Try signing out and back in
+                with Google so your account can finish setup.
+              </>
+            )}
           </p>
         </div>
       </DashboardShell>

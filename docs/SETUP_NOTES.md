@@ -7,7 +7,7 @@ Items to complete outside this repository:
 - Confirm the `entry-images` storage bucket exists and remains private.
 - Add local secrets in `.env.local` using `.env.example` as the template.
 - Configure Supabase **Google** auth (see `docs/google-auth-setup.md`). Production login is Google-only.
-- Optional locally: `NEXT_PUBLIC_DEV_EMAIL_AUTH=true` for seeded `user1` / `user2` email login.
+- Dev-only UI (email login, preview dashboard link): automatic in `npm run dev`, or set `NEXT_PUBLIC_DEV_FEATURES=true` on preview deploys — never on production `main` (see `src/lib/auth/dev.ts`).
 - Add the deployed app URL and local callback URL in Supabase Auth redirect settings.
 - If exported PDFs do not include images, configure Supabase Storage CORS for your local and deployed app origins.
 - Later, connect the GitHub repository to Cloudflare Pages and add the same environment variables there.

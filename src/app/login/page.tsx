@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/forms/auth-form";
-import { hasDevEmailAuth } from "@/lib/auth/dev";
+import { hasDevEmailAuth, isDevFeaturesEnabled } from "@/lib/auth/dev";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -41,9 +41,11 @@ export default async function LoginPage() {
           <AuthForm isConfigured={hasSupabaseEnv} showDevEmailAuth={hasDevEmailAuth} />
         </div>
 
-        <Link className="text-sm font-semibold text-yearbook-accent" href="/dashboard">
-          Preview dashboard
-        </Link>
+        {isDevFeaturesEnabled ? (
+          <Link className="text-sm font-semibold text-yearbook-accent" href="/dashboard">
+            Preview dashboard
+          </Link>
+        ) : null}
       </div>
     </main>
   );

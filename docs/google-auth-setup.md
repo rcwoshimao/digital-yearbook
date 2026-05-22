@@ -49,10 +49,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 Restart `npm run dev` after changing env files.
 
-Optional dev email login:
+Optional dev email login (also enabled automatically during `npm run dev`):
 
 ```bash
-NEXT_PUBLIC_DEV_EMAIL_AUTH=true
+NEXT_PUBLIC_DEV_FEATURES=true
+# or legacy: NEXT_PUBLIC_DEV_EMAIL_AUTH=true
 ```
 
 ## 4. If you see “Unable to exchange external code”

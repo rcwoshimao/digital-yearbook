@@ -1,3 +1,5 @@
+import { isDevFeaturesEnabled } from "@/lib/auth/dev";
+
 export type FriendlyErrorContext =
   | "auth"
   | "entry_submit"
@@ -97,11 +99,15 @@ function messageForRls(context: FriendlyErrorContext): string {
 
 function messageForAuth(text: string): string | null {
   if (text === "Database error querying schema") {
-    return "Your auth user record is missing required fields. Run supabase/dev_seed.sql in the Supabase SQL editor, then try again.";
+    return isDevFeaturesEnabled
+      ? "Your auth user record is missing required fields. Run supabase/dev_seed.sql in the Supabase SQL editor, then try again."
+      : "Your account could not be loaded. Try signing out and back in with Google.";
   }
 
   if (text === "Invalid login credentials") {
-    return "Incorrect email/username or password. If you seeded via SQL, run `npm run seed:dev` to reset test passwords.";
+    return isDevFeaturesEnabled
+      ? "Incorrect email/username or password. If you seeded via SQL, run `npm run seed:dev` to reset test passwords."
+      : "Incorrect email or password.";
   }
 
   if (/email not confirmed/i.test(text)) {

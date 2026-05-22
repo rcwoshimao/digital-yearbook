@@ -28,7 +28,7 @@ Complete these before touching production:
 - [x] Google sign-in works on `http://localhost:3000` (see `docs/google-auth-setup.md`)
 - [x] You can sign a canvas page and see it in the yearbook flipbook
 - [x] Dashboard PDF export works (or you know which case still fails)
-- [ ] `npm run build` succeeds locally (catches TypeScript/Next errors early)
+- [x] `npm run build` succeeds locally (catches TypeScript/Next errors early)
 - [ ] `npm run lint` passes (optional but recommended)
 
 ---
@@ -223,7 +223,8 @@ Set in **Pages → Settings → Environment variables** for **Production** (and 
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon (public) key |
 | `NEXT_PUBLIC_APP_URL` | Yes | Canonical site URL, e.g. `https://yearbook.yourdomain.com` — used in server redirects and email redirects |
 | `SUPABASE_SERVICE_ROLE_KEY` | No* | Only if you add server admin tools; **not** used by `src/` today |
-| `NEXT_PUBLIC_DEV_EMAIL_AUTH` | **Must be unset or `false`** | Never `true` in production |
+| `NEXT_PUBLIC_DEV_FEATURES` | **Must be unset** on production | Enables dev UI on preview/staging deploys only |
+| `NEXT_PUBLIC_DEV_EMAIL_AUTH` | **Must be unset** on production | Legacy alias for `NEXT_PUBLIC_DEV_FEATURES` |
 
 \* `scripts/seed-dev-users.mjs` uses the service role locally only.
 
@@ -250,9 +251,17 @@ After changing env vars, **redeploy** — `NEXT_PUBLIC_*` values are inlined at 
 
 ### 6.1 Auth & dev features
 
-- [ ] **Do not** set `NEXT_PUBLIC_DEV_EMAIL_AUTH=true` in Cloudflare
+Dev-only UI is controlled by `src/lib/auth/dev.ts` (`isDevFeaturesEnabled`). It turns on when `NODE_ENV=development` (local `npm run dev`) or when you set `NEXT_PUBLIC_DEV_FEATURES=true` (or legacy `NEXT_PUBLIC_DEV_EMAIL_AUTH=true`).
+
+| Deploy target | Env vars | What users see |
+|---------------|----------|----------------|
+| **Production** (`main`) | none | Google login only; no “Preview dashboard”; no email/password |
+| **Preview** (`dev` branch) | `NEXT_PUBLIC_DEV_FEATURES=true` | Same dev tools as local (email login, preview link, seed hints) |
+| **Local** | optional — auto-on in `npm run dev` | Full dev toolkit without extra env |
+
+- [ ] Production Cloudflare env: **do not** set `NEXT_PUBLIC_DEV_FEATURES` or `NEXT_PUBLIC_DEV_EMAIL_AUTH`
+- [ ] Cloudflare **preview** env (branch `dev`): set `NEXT_PUBLIC_DEV_FEATURES=true` if you want dev login on preview URLs
 - [ ] **Do not** run `npm run seed:dev` against production Supabase
-- [ ] Remove or hide the login page **“Preview dashboard”** link if you do not want unauthenticated users seeing that entry point (`src/app/login/page.tsx`)
 
 ### 6.2 Cloudflare WAF / rate limiting (optional)
 
@@ -291,8 +300,9 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 NEXT_PUBLIC_APP_URL=https://yearbook.yourdomain.com
 
-# Local dev only — never in production
-NEXT_PUBLIC_DEV_EMAIL_AUTH=true
+# Local dev only — optional; npm run dev enables dev features automatically
+# NEXT_PUBLIC_DEV_FEATURES=true
+# NEXT_PUBLIC_DEV_EMAIL_AUTH=true  # legacy alias
 
 # Local scripts only (seed:dev) — omit from Cloudflare unless needed
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
