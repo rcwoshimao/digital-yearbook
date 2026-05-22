@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { hasDevEmailAuth } from "@/lib/auth/dev";
 import { resolveLoginEmail } from "@/lib/auth/resolve-login-email";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
+import { friendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/server";
 import { isValidUsername, normalizeUsername } from "@/lib/username";
 
@@ -44,14 +45,7 @@ export async function signIn(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    const message =
-      error.message === "Database error querying schema"
-        ? "Your auth user record is missing required fields. Run supabase/dev_seed.sql in the Supabase SQL editor, then try again."
-        : error.message === "Invalid login credentials"
-          ? "Incorrect email/username or password. If you seeded via SQL, run `npm run seed:dev` to reset test passwords to ------."
-          : error.message;
-
-    redirect(encodedMessage("auth_error", message));
+    redirect(encodedMessage("auth_error", friendlyErrorMessage(error, "auth")));
   }
 
   redirect("/dashboard");
@@ -101,7 +95,7 @@ export async function signUp(formData: FormData) {
   });
 
   if (error) {
-    redirect(encodedMessage("auth_error", error.message));
+    redirect(encodedMessage("auth_error", friendlyErrorMessage(error, "auth")));
   }
 
   if (data.user) {

@@ -8,23 +8,27 @@ type NotificationBannerProps = {
   tone: NotificationTone;
 };
 
+/** Matches legacy FlashBanner + draft-banner styling (rounded-2xl, soft fills). */
 const TONE_STYLES: Record<NotificationTone, string> = {
-  error: "border-red-200 bg-red-50 text-red-800",
-  success: "border-green-200 bg-green-50 text-green-900",
+  error: "border-red-200 bg-red-50 text-red-700",
+  success: "border-green-200 bg-green-50 font-semibold text-green-800",
   info: "border-amber-200 bg-amber-50 text-amber-950",
 };
 
 export function NotificationBanner({ message, onDismiss, tone }: NotificationBannerProps) {
   return (
     <div
-      className={`fixed inset-x-0 top-0 z-[200] border-b px-4 py-3 shadow-md ${TONE_STYLES[tone]}`}
-      role="alert"
+      aria-live="polite"
+      className="pointer-events-none fixed inset-x-0 top-0 z-[200] flex justify-center px-4 pt-4 sm:pt-5"
     >
-      <div className="mx-auto flex max-w-5xl items-start gap-3">
-        <p className="min-w-0 flex-1 text-sm font-semibold leading-snug">{message}</p>
+      <div
+        className={`pointer-events-auto flex w-full max-w-3xl items-start gap-3 rounded-2xl border p-4 text-sm shadow-sm ${TONE_STYLES[tone]}`}
+        role="alert"
+      >
+        <p className="min-w-0 flex-1 leading-snug">{message}</p>
         <button
           aria-label="Dismiss notification"
-          className="shrink-0 rounded-full p-1 text-current/70 transition hover:bg-black/5 hover:text-current"
+          className="shrink-0 rounded-full p-1 text-current/60 transition hover:bg-black/5 hover:text-current"
           onClick={onDismiss}
           type="button"
         >

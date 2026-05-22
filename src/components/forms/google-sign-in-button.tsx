@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useNotification } from "@/components/providers/notification-provider";
+import { friendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 type GoogleSignInButtonProps = {
   disabled?: boolean;
@@ -32,7 +33,7 @@ export function GoogleSignInButton({
       });
 
       if (error) {
-        notifyError(error.message);
+        notifyError(friendlyErrorMessage(error, "auth"));
         setIsLoading(false);
         return;
       }

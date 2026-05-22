@@ -2,6 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
+import { friendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeUsername } from "@/lib/username";
 
@@ -94,14 +95,7 @@ export async function submitCanvasEntry(formData: FormData) {
   );
 
   if (uploadError) {
-    const lower = uploadError.message.toLowerCase();
-    const message = lower.includes("bucket not found")
-      ? "Storage bucket entry-pdfs is missing. Run supabase/setup_entry_pdfs_bucket.sql in the Supabase SQL editor, then try again."
-      : lower.includes("row-level security")
-        ? "Could not upload your page. Run supabase/migrations/0008_add_entry_page_image_url.sql in the Supabase SQL editor, then try again."
-        : uploadError.message;
-
-    redirect(writeErrorUrl(ownerUsername, message));
+    redirect(writeErrorUrl(ownerUsername, friendlyErrorMessage(uploadError, "entry_upload")));
   }
 
   const { error } = await supabase.from("entries").insert({
@@ -120,11 +114,7 @@ export async function submitCanvasEntry(formData: FormData) {
   if (error) {
     await supabase.storage.from("entry-pdfs").remove([pageImageObjectPath]);
 
-    const message = error.message.toLowerCase().includes("row-level security")
-      ? "Could not save your entry. Run supabase/setup_entry_pdfs_bucket.sql in the Supabase SQL editor, then try again."
-      : error.message;
-
-    redirect(writeErrorUrl(ownerUsername, message));
+    redirect(writeErrorUrl(ownerUsername, friendlyErrorMessage(error, "entry_submit")));
   }
 
   redirect("/write?signed=1");

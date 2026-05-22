@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { friendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { getSupabaseEnv, hasSupabaseEnv } from "@/lib/supabase/env";
 
 export async function GET(request: NextRequest) {
@@ -10,7 +11,9 @@ export async function GET(request: NextRequest) {
     requestUrl.searchParams.get("error_description") ?? requestUrl.searchParams.get("error");
 
   if (authError) {
-    const params = new URLSearchParams({ auth_error: authError });
+    const params = new URLSearchParams({
+      auth_error: friendlyErrorMessage(authError, "auth"),
+    });
     return NextResponse.redirect(new URL(`/login?${params.toString()}`, requestUrl.origin));
   }
 
@@ -40,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     const loginUrl = new URL("/login", requestUrl.origin);
-    loginUrl.searchParams.set("auth_error", error.message);
+    loginUrl.searchParams.set("auth_error", friendlyErrorMessage(error, "auth"));
     response = NextResponse.redirect(loginUrl);
   }
 

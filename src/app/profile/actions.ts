@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { friendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/server";
 import { isValidUsername, normalizeUsername } from "@/lib/username";
 
@@ -64,11 +65,11 @@ export async function updateUsername(formData: FormData) {
   const { error } = await supabase.from("profiles").update({ username }).eq("id", userId);
 
   if (error) {
-    if (error.code === "23505") {
-      profileRedirect(previousUsername, "profile_error", "That username is already taken. Try another one.");
-    }
-
-    profileRedirect(previousUsername, "profile_error", error.message);
+    profileRedirect(
+      previousUsername,
+      "profile_error",
+      friendlyErrorMessage(error, "profile_username"),
+    );
   }
 
   revalidateProfile([previousUsername, username]);
@@ -107,7 +108,7 @@ export async function updateSchool(formData: FormData) {
     .eq("id", userId);
 
   if (error) {
-    profileRedirect(returnUsername, "profile_error", error.message);
+    profileRedirect(returnUsername, "profile_error", friendlyErrorMessage(error, "profile_school"));
   }
 
   revalidateProfile([returnUsername]);

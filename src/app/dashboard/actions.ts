@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { friendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeUsername } from "@/lib/username";
 
@@ -48,7 +49,7 @@ export async function updateShareMode(formData: FormData) {
     .eq("id", yearbookId);
 
   if (error) {
-    ownerRedirect(formData, error.message);
+    ownerRedirect(formData, friendlyErrorMessage(error, "share_mode"));
   }
 
   await revalidateOwnerViews(supabase);
@@ -82,7 +83,7 @@ export async function addInvite(formData: FormData) {
     .maybeSingle<{ id: string }>();
 
   if (lookupError) {
-    ownerRedirect(formData, lookupError.message);
+    ownerRedirect(formData, friendlyErrorMessage(lookupError, "invite"));
   }
 
   if (!invitedProfile?.id) {
@@ -101,7 +102,7 @@ export async function addInvite(formData: FormData) {
   });
 
   if (error) {
-    ownerRedirect(formData, error.message);
+    ownerRedirect(formData, friendlyErrorMessage(error, "invite"));
   }
 
   await revalidateOwnerViews(supabase);
@@ -123,7 +124,7 @@ export async function revokeInvite(formData: FormData) {
     .eq("invited_user_id", invitedUserId);
 
   if (error) {
-    ownerRedirect(formData, error.message);
+    ownerRedirect(formData, friendlyErrorMessage(error, "revoke_invite"));
   }
 
   await revalidateOwnerViews(supabase);

@@ -8,7 +8,7 @@ Unified notification system: one fixed top-of-viewport banner for success, error
 
 | Piece | File | Role |
 |-------|------|------|
-| **`NotificationBanner`** | `src/components/ui/notification-banner.tsx` | Fixed top, `z-[200]`, dismiss × |
+| **`NotificationBanner`** | `src/components/ui/notification-banner.tsx` | Fixed top with margin; rounded-2xl card (legacy FlashBanner look); dismiss × |
 | **`NotificationProvider`** | `src/components/providers/notification-provider.tsx` | Context + URL sync + render |
 | **`AppProviders`** | `src/components/providers/app-providers.tsx` | Wraps app in root layout (`Suspense`) |
 | **`useNotification()`** | same provider | `notify`, `notifyError`, `notifySuccess`, `notifyInfo`, `dismiss` |
@@ -16,7 +16,7 @@ Unified notification system: one fixed top-of-viewport banner for success, error
 
 ### Behavior
 
-- Banner is **sticky to the viewport top**, above all content.
+- Banner is **fixed near the top** (`pt-4` / `pt-5`, horizontal inset), centered card — same soft Tailwind palette as the old `FlashBanner` (`rounded-2xl`, `bg-*-50`, colored borders), not a full-width popup bar.
 - User dismisses with **×**; URL notification params are stripped via `router.replace` (no full reload).
 - **No auto-dismiss** (replaces old 4s canvas toast).
 - Client code calls `useNotification()`; server actions still redirect with query params (unchanged).
