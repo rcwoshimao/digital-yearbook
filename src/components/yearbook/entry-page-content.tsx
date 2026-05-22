@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { format } from "date-fns";
+import { SignedPageMetadata } from "@/components/yearbook/signed-page-metadata";
 import type { YearbookEntry } from "@/lib/types/yearbook";
 
 type EntryPageContentProps = {
@@ -14,23 +15,22 @@ function chromelessPdfUrl(url: string) {
 }
 
 export function EntryPageContent({ entry, showSignedPageMetadata = true }: EntryPageContentProps) {
-  const meta = [entry.authorClass, entry.authorUniversity].filter(Boolean).join(" · ");
-
   if (entry.pageImageUrl) {
     return (
-      <article className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white">
+      <article className="relative h-full w-full overflow-hidden">
         <img
           alt={`${entry.authorName}'s yearbook page`}
-          className="h-full w-full object-contain"
+          className="block h-full w-full"
           draggable={false}
           src={entry.pageImageUrl}
         />
         {showSignedPageMetadata ? (
-          <footer className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-white/90 to-transparent px-3 pb-2 pt-6 text-xs opacity-70">
-            <p className="font-semibold">{entry.authorName}</p>
-            {meta ? <p>{meta}</p> : null}
-            <p>Written on {format(entry.createdAt, "PPP")}</p>
-          </footer>
+          <SignedPageMetadata
+            authorClass={entry.authorClass}
+            authorName={entry.authorName}
+            authorUniversity={entry.authorUniversity}
+            createdAt={entry.createdAt}
+          />
         ) : null}
       </article>
     );
@@ -47,6 +47,8 @@ export function EntryPageContent({ entry, showSignedPageMetadata = true }: Entry
       </article>
     );
   }
+
+  const meta = [entry.authorClass, entry.authorUniversity].filter(Boolean).join(" · ");
 
   return (
     <article className="flex h-full flex-col p-8">

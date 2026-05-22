@@ -103,6 +103,16 @@ a {
   pointer-events: none;
 }
 
+/* Flipbook / editor author overlay — legible on any page background */
+.signed-page-metadata-text {
+  text-shadow:
+    0 0 6px rgba(255, 255, 255, 1),
+    0 0 12px rgba(255, 255, 255, 0.95),
+    0 1px 3px rgba(255, 255, 255, 1),
+    -1px 0 3px rgba(255, 255, 255, 0.9),
+    1px 0 3px rgba(255, 255, 255, 0.9);
+}
+
 .yearbook-border-corner {
   background-image:
     linear-gradient(currentColor, currentColor),

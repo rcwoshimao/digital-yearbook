@@ -1,7 +1,16 @@
 "use client";
 
+import { useRef, useState } from "react";
+
 import { addInvite, revokeInvite, updateShareMode } from "@/app/dashboard/actions";
 import { useNotification } from "@/components/providers/notification-provider";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { YearbookInvite } from "@/lib/types/yearbook";
 
 type ShareControlsProps = {
@@ -78,19 +87,12 @@ export function ShareControls({
         <div className="space-y-2">
           <p className="text-sm font-semibold text-stone-700">Invited users</p>
           {invites.map((invite) => (
-            <form
-              action={revokeInvite}
-              className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm"
+            <RevokeInviteRow
+              invite={invite}
               key={invite.id}
-            >
-              <input name="returnPath" type="hidden" value={returnPath} />
-              <input name="yearbookId" type="hidden" value={yearbookId} />
-              <input name="invitedUserId" type="hidden" value={invite.invitedUserId} />
-              <span className="truncate text-sm font-semibold">@{invite.invitedUsername}</span>
-              <button className="font-semibold text-red-700" type="submit">
-                Revoke
-              </button>
-            </form>
+              returnPath={returnPath}
+              yearbookId={yearbookId}
+            />
           ))}
         </div>
       ) : null}
@@ -122,5 +124,69 @@ export function ShareControls({
         </button>
       </form>
     </section>
+  );
+}
+
+type RevokeInviteRowProps = {
+  invite: YearbookInvite;
+  returnPath: string;
+  yearbookId: string;
+};
+
+function RevokeInviteRow({ invite, returnPath, yearbookId }: RevokeInviteRowProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  return (
+    <>
+      <form
+        action={revokeInvite}
+        className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm"
+        ref={formRef}
+      >
+        <input name="returnPath" type="hidden" value={returnPath} />
+        <input name="yearbookId" type="hidden" value={yearbookId} />
+        <input name="invitedUserId" type="hidden" value={invite.invitedUserId} />
+        <span className="truncate text-sm font-semibold">@{invite.invitedUsername}</span>
+        <button
+          className="font-semibold text-red-700"
+          onClick={() => setConfirmOpen(true)}
+          type="button"
+        >
+          Revoke
+        </button>
+      </form>
+
+      <Dialog onOpenChange={setConfirmOpen} open={confirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke invite?</DialogTitle>
+            <DialogDescription>
+              @{invite.invitedUsername} will no longer be able to sign your yearbook using your
+              share link. You can invite them again later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              className="rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700"
+              onClick={() => setConfirmOpen(false)}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className="rounded-full bg-red-700 px-4 py-2 text-sm font-semibold text-white"
+              onClick={() => {
+                setConfirmOpen(false);
+                formRef.current?.requestSubmit();
+              }}
+              type="button"
+            >
+              Revoke
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

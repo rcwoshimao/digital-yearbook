@@ -1,4 +1,5 @@
 import type { Canvas } from "fabric";
+import { normalizeCanvasBackground } from "@/lib/canvas/background-image";
 
 export type PageExportProfile = {
   multiplier: number;
@@ -34,6 +35,9 @@ function dataUrlToBlob(dataUrl: string): Blob {
 }
 
 export function exportPageImage(canvas: Canvas, profile: PageExportProfile): Blob {
+  normalizeCanvasBackground(canvas, { width: canvas.width, height: canvas.height });
+  canvas.requestRenderAll();
+
   const dataUrl = canvas.toDataURL({
     format: "jpeg",
     quality: profile.quality,

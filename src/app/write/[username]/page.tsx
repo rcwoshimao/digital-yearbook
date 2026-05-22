@@ -85,8 +85,17 @@ export default async function WriteEntryPage({ params }: WriteEntryPageProps) {
     );
   }
 
-  const [{ data: authorProfile }, { data: yearbook }] = await Promise.all([
+  const [{ data: authorProfile }, { data: signerProfile }, { data: yearbook }] = await Promise.all([
     supabase.from("profiles").select("id").eq("id", user.id).maybeSingle<{ id: string }>(),
+    supabase
+      .from("profiles")
+      .select("display_name, university, graduation_class")
+      .eq("id", user.id)
+      .maybeSingle<{
+        display_name: string;
+        university: string | null;
+        graduation_class: string | null;
+      }>(),
     supabase
       .from("yearbooks")
       .select("id, owner_id")
@@ -107,7 +116,7 @@ export default async function WriteEntryPage({ params }: WriteEntryPageProps) {
     );
   }
 
-  if (!authorProfile) {
+  if (!authorProfile || !signerProfile) {
     return (
       <WritePageShell ownerUsername={ownerProfile.username}>
         <div className="rounded-3xl bg-white/80 p-6 shadow-sm ring-1 ring-stone-200">
@@ -153,8 +162,12 @@ export default async function WriteEntryPage({ params }: WriteEntryPageProps) {
           </div>
 
           <div
-            className="mx-auto overflow-hidden rounded-[2rem] bg-white shadow-lg ring-1 ring-stone-200"
-            style={{ aspectRatio: `${BOOK_WIDTH} / ${BOOK_HEIGHT}`, maxWidth: BOOK_WIDTH }}
+            className="mx-auto h-full overflow-hidden rounded-[2rem] shadow-lg ring-1 ring-stone-200"
+            style={{
+              aspectRatio: `${BOOK_WIDTH} / ${BOOK_HEIGHT}`,
+              maxWidth: BOOK_WIDTH,
+              width: "100%",
+            }}
           >
             <EntryPageContent entry={signedEntry} showSignedPageMetadata={false} />
           </div>
@@ -179,7 +192,13 @@ export default async function WriteEntryPage({ params }: WriteEntryPageProps) {
       recipientMeta={recipientMeta}
       recipientName={recipientName}
     >
-      <CanvasEntryEditor ownerUsername={ownerProfile.username} yearbookId={yearbook.id} />
+      <CanvasEntryEditor
+        authorClass={signerProfile.graduation_class}
+        authorName={signerProfile.display_name}
+        authorUniversity={signerProfile.university}
+        ownerUsername={ownerProfile.username}
+        yearbookId={yearbook.id}
+      />
     </WritePageShell>
   );
 }

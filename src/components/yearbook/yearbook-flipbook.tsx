@@ -270,6 +270,14 @@ function EmptyPage({ shareUrl }: { shareUrl: string }) {
 }
 
 function EntryPage({ entry }: { entry: YearbookEntry }) {
+  if (entry.pageImageUrl) {
+    return (
+      <div className="h-full w-full overflow-hidden">
+        <EntryPageContent entry={entry} />
+      </div>
+    );
+  }
+
   const styleConfig = normalizeYearbookPageStyle(entry.styleConfig);
 
   return (

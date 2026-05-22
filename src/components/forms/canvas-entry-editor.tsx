@@ -10,6 +10,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  applyBackgroundImageToCanvas,
+  normalizeCanvasBackground,
+} from "@/lib/canvas/background-image";
 import { clearDraft, hasDraft, loadDraftCanvas, saveDraft } from "@/lib/canvas/draft-store";
 import {
   exportPageImage,
@@ -30,6 +34,7 @@ import {
 import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
 import { StickerPickerDialog } from "@/components/forms/sticker-picker-dialog";
 import { useNotification } from "@/components/providers/notification-provider";
+import { SignedPageMetadata } from "@/components/yearbook/signed-page-metadata";
 
 configureCanvasSelectionOverlay();
 
@@ -44,11 +49,20 @@ const DEFAULT_TEXT_WIDTH = 320;
 type EditableText = Textbox | IText;
 
 type CanvasEntryEditorProps = {
+  authorClass?: string | null;
+  authorName: string;
+  authorUniversity?: string | null;
   ownerUsername: string;
   yearbookId: string;
 };
 
-export function CanvasEntryEditor({ ownerUsername, yearbookId }: CanvasEntryEditorProps) {
+export function CanvasEntryEditor({
+  authorClass,
+  authorName,
+  authorUniversity,
+  ownerUsername,
+  yearbookId,
+}: CanvasEntryEditorProps) {
   const { notifyError, notifySuccess } = useNotification();
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const fabricRef = useRef<Canvas | null>(null);
@@ -114,6 +128,7 @@ export function CanvasEntryEditor({ ownerUsername, yearbookId }: CanvasEntryEdit
       isRestoringRef.current = true;
 
       await canvas.loadFromJSON(snapshot);
+      normalizeCanvasBackground(canvas, { width: PAGE_WIDTH, height: PAGE_HEIGHT });
       fixCanvasTextFontFamilies(canvas);
       canvas.renderAll();
       historyIndexRef.current = index;
@@ -335,6 +350,7 @@ export function CanvasEntryEditor({ ownerUsername, yearbookId }: CanvasEntryEdit
 
       isRestoringRef.current = true;
       await canvas.loadFromJSON(hydrated);
+      normalizeCanvasBackground(canvas, { width: PAGE_WIDTH, height: PAGE_HEIGHT });
       fixCanvasTextFontFamilies(canvas);
       canvas.renderAll();
       pushHistory(canvas);
@@ -441,20 +457,10 @@ export function CanvasEntryEditor({ ownerUsername, yearbookId }: CanvasEntryEdit
 
     const dataUrl = await readFileAsDataUrl(file);
     const image = await FabricImage.fromURL(dataUrl);
-    const scaleX = PAGE_WIDTH / (image.width ?? PAGE_WIDTH);
-    const scaleY = PAGE_HEIGHT / (image.height ?? PAGE_HEIGHT);
-
-    image.set({
-      scaleX,
-      scaleY,
-      left: 0,
-      top: 0,
-      originX: "left",
-      originY: "top",
+    applyBackgroundImageToCanvas(canvas, image, {
+      width: PAGE_WIDTH,
+      height: PAGE_HEIGHT,
     });
-
-    canvas.backgroundImage = image;
-    canvas.backgroundVpt = false;
     canvas.renderAll();
     pushHistory(canvas);
   }
@@ -665,7 +671,8 @@ export function CanvasEntryEditor({ ownerUsername, yearbookId }: CanvasEntryEdit
 
       <div className="canvas-editor-stage">
         <p className="mb-3 text-center text-sm text-stone-600">
-          Edit your page below — this is what will appear in their yearbook.
+          Edit your page below — your name and school details appear automatically at the bottom
+          (same as in the yearbook).
         </p>
         <div
           className="canvas-editor-stage__surface"
@@ -679,6 +686,14 @@ export function CanvasEntryEditor({ ownerUsername, yearbookId }: CanvasEntryEdit
             />
           ) : null}
           <canvas ref={canvasElementRef} />
+          {canvasReady ? (
+            <SignedPageMetadata
+              authorClass={authorClass}
+              authorName={authorName}
+              authorUniversity={authorUniversity}
+              className="opacity-80"
+            />
+          ) : null}
         </div>
       </div>
 
@@ -725,12 +740,22 @@ export function CanvasEntryEditor({ ownerUsername, yearbookId }: CanvasEntryEdit
             <DialogDescription>Review your page before you sign.</DialogDescription>
           </DialogHeader>
           {previewUrl ? (
-            <div className="mt-4 flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-white">
-              <img
-                alt="Entry preview"
-                className="max-h-full max-w-full object-contain"
-                src={previewUrl}
-              />
+            <div className="mt-4 flex min-h-0 flex-1 items-center justify-center">
+              <div
+                className="relative max-h-full max-w-full overflow-hidden rounded-xl border border-stone-200 bg-white"
+                style={{ aspectRatio: `${PAGE_WIDTH} / ${PAGE_HEIGHT}` }}
+              >
+                <img
+                  alt="Entry preview"
+                  className="block h-full w-full"
+                  src={previewUrl}
+                />
+                <SignedPageMetadata
+                  authorClass={authorClass}
+                  authorName={authorName}
+                  authorUniversity={authorUniversity}
+                />
+              </div>
             </div>
           ) : null}
           <div className="mt-4 flex flex-wrap justify-end gap-3">
