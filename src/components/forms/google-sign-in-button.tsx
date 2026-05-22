@@ -46,12 +46,7 @@ export function GoogleSignInButton({
       notifyError("Could not get Google sign-in URL. Check Supabase Google provider settings.");
       setIsLoading(false);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      notifyError(
-        message.includes("Supabase")
-          ? message
-          : `Could not start Google sign-in: ${message}`,
-      );
+      notifyError(friendlyErrorMessage(error instanceof Error ? error : String(error), "auth"));
       setIsLoading(false);
     }
   }

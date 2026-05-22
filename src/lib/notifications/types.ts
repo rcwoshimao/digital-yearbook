@@ -1,3 +1,8 @@
+import {
+  friendlyErrorMessage,
+  type FriendlyErrorContext,
+} from "@/lib/errors/friendly-message";
+
 export type NotificationTone = "error" | "success" | "info";
 
 export type NotificationPayload = {
@@ -22,12 +27,20 @@ export type NotificationUrlParam = (typeof NOTIFICATION_URL_PARAMS)[number];
 
 const SIGNED_SUCCESS_MESSAGE = "You've signed the yearbook!";
 
+function sanitizeErrorParam(raw: string, context: FriendlyErrorContext): string {
+  return friendlyErrorMessage(raw, context);
+}
+
 export function parseNotificationFromSearchParams(
   searchParams: URLSearchParams,
 ): NotificationPayload | null {
   const authError = searchParams.get("auth_error");
   if (authError) {
-    return { message: authError, tone: "error", urlParamsToClear: ["auth_error"] };
+    return {
+      message: sanitizeErrorParam(authError, "auth"),
+      tone: "error",
+      urlParamsToClear: ["auth_error"],
+    };
   }
 
   const authMessage = searchParams.get("auth_message");
@@ -41,12 +54,20 @@ export function parseNotificationFromSearchParams(
 
   const dashboardError = searchParams.get("dashboard_error");
   if (dashboardError) {
-    return { message: dashboardError, tone: "error", urlParamsToClear: ["dashboard_error"] };
+    return {
+      message: sanitizeErrorParam(dashboardError, "invite"),
+      tone: "error",
+      urlParamsToClear: ["dashboard_error"],
+    };
   }
 
   const profileError = searchParams.get("profile_error");
   if (profileError) {
-    return { message: profileError, tone: "error", urlParamsToClear: ["profile_error"] };
+    return {
+      message: sanitizeErrorParam(profileError, "profile_username"),
+      tone: "error",
+      urlParamsToClear: ["profile_error"],
+    };
   }
 
   const profileMessage = searchParams.get("profile_message");
@@ -56,7 +77,11 @@ export function parseNotificationFromSearchParams(
 
   const entryError = searchParams.get("entry_error");
   if (entryError) {
-    return { message: entryError, tone: "error", urlParamsToClear: ["entry_error"] };
+    return {
+      message: sanitizeErrorParam(entryError, "entry_submit"),
+      tone: "error",
+      urlParamsToClear: ["entry_error"],
+    };
   }
 
   return null;

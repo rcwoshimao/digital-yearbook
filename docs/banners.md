@@ -19,7 +19,7 @@ Unified notification system: one fixed top-of-viewport banner for success, error
 - Banner is **fixed near the top** (`pt-4` / `pt-5`, horizontal inset), centered card — same soft Tailwind palette as the old `FlashBanner` (`rounded-2xl`, `bg-*-50`, colored borders), not a full-width popup bar.
 - User dismisses with **×**; URL notification params are stripped via `router.replace` (no full reload).
 - **No auto-dismiss** (replaces old 4s canvas toast).
-- Client code calls `useNotification()`; server actions still redirect with query params (unchanged).
+- Client code calls `useNotification()`; server actions redirect with query params. Raw Supabase/Postgres errors are mapped to friendly copy via `src/lib/errors/friendly-message.ts` (e.g. duplicate invite → “That person is already invited…”).
 
 ### URL query params (server redirects)
 
