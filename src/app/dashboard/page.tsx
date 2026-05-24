@@ -3,6 +3,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PdfExportButton } from "@/components/yearbook/pdf-export-button";
 import { ShareControls } from "@/components/yearbook/share-controls";
 import { YearbookFlipbook } from "@/components/yearbook/yearbook-flipbook";
+import { getAppUrl } from "@/lib/app-url";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import type { YearbookEntry } from "@/lib/types/yearbook";
@@ -92,7 +93,7 @@ export default async function DashboardPage() {
     (receivedRows ?? []).map(async (row) => mapEntryRow(row, await signEntryRowAssets(supabase, row))),
   );
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   const ownerName = profile?.display_name ?? "you";
   const entryLabel = receivedEntries.length === 1 ? "signed page" : "signed pages";
 

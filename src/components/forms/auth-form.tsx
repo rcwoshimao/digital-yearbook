@@ -106,9 +106,10 @@ function EmailPasswordAuth({ isConfigured }: { isConfigured: boolean }) {
           <AuthField label="Username" name="username" placeholder="rebecca2026" type="text" />
           <AuthField label="University" name="university" type="text" />
           <AuthField
+            graduationYear
             label="Graduation class"
             name="graduationClass"
-            placeholder="Class of 2026"
+            placeholder="2026"
             type="text"
           />
           <AuthField label="Email" name="email" type="email" />
@@ -126,23 +127,42 @@ function EmailPasswordAuth({ isConfigured }: { isConfigured: boolean }) {
 }
 
 type AuthFieldProps = {
+  graduationYear?: boolean;
   label: string;
   name: string;
   placeholder?: string;
   type: string;
 };
 
-function AuthField({ label, name, placeholder, type }: AuthFieldProps) {
+function AuthField({ graduationYear, label, name, placeholder, type }: AuthFieldProps) {
   return (
     <label className="block text-sm font-semibold text-stone-700">
       {label}
       <input
         className="mt-2 w-full rounded-2xl border border-stone-300 bg-white/90 px-4 py-3 outline-none transition focus:border-yearbook-accent focus:ring-4 focus:ring-yearbook-accent/10"
+        inputMode={graduationYear ? "numeric" : undefined}
+        maxLength={graduationYear ? 4 : undefined}
         name={name}
+        onInput={
+          graduationYear
+            ? (event) => {
+                const input = event.currentTarget;
+                const digits = input.value.replace(/\D/g, "").slice(0, 4);
+                if (input.value !== digits) {
+                  input.value = digits;
+                }
+              }
+            : undefined
+        }
+        pattern={graduationYear ? "[0-9]{4}" : undefined}
         placeholder={placeholder}
         required
+        title={graduationYear ? "Enter a 4-digit year (e.g. 2026)" : undefined}
         type={type}
       />
+      {graduationYear ? (
+        <p className="mt-1.5 text-xs text-stone-500">4-digit graduation year (e.g. 2026).</p>
+      ) : null}
     </label>
   );
 }

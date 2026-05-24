@@ -49,6 +49,14 @@ export function UserMenu({ profileUsername, userName, signOutAction }: UserMenuP
           role="menu"
           className="absolute right-0 top-full z-20 mt-2 min-w-[10rem] overflow-hidden rounded-2xl bg-white py-1 shadow-lg ring-1 ring-stone-200"
         >
+          <Link
+            href="/dashboard"
+            role="menuitem"
+            className="block px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
+            onClick={() => setOpen(false)}
+          >
+            My Yearbook
+          </Link>
           {profileUsername ? (
             <Link
               href={`/profile/${profileUsername}`}

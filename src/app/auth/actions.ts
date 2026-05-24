@@ -3,9 +3,14 @@
 import { redirect } from "next/navigation";
 import { hasDevEmailAuth } from "@/lib/auth/dev";
 import { resolveLoginEmail } from "@/lib/auth/resolve-login-email";
+import { getAuthCallbackUrl } from "@/lib/app-url";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { friendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/server";
+import {
+  graduationClassValidationError,
+  parseGraduationClass,
+} from "@/lib/profile/graduation-class";
 import { isValidUsername, normalizeUsername } from "@/lib/username";
 
 function encodedMessage(type: "auth_error" | "auth_message", message: string) {
@@ -65,7 +70,12 @@ export async function signUp(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const university = String(formData.get("university") ?? "").trim() || null;
-  const graduationClass = String(formData.get("graduationClass") ?? "").trim() || null;
+  const graduationClassRaw = String(formData.get("graduationClass") ?? "");
+  const graduationClassError = graduationClassValidationError(graduationClassRaw);
+  if (graduationClassError) {
+    redirect(encodedMessage("auth_error", graduationClassError));
+  }
+  const graduationClass = parseGraduationClass(graduationClassRaw);
 
   if (!displayName) {
     redirect(encodedMessage("auth_error", "Enter a display name."));
@@ -80,7 +90,6 @@ export async function signUp(formData: FormData) {
     );
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -90,7 +99,7 @@ export async function signUp(formData: FormData) {
         display_name: displayName,
         username,
       },
-      emailRedirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent("/dashboard")}`,
+      emailRedirectTo: getAuthCallbackUrl("/dashboard"),
     },
   });
 

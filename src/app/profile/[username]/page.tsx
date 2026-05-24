@@ -2,10 +2,11 @@ import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ProfileSettingsForm } from "@/components/profile/profile-settings-form";
 import { ShareControls } from "@/components/yearbook/share-controls";
+import { getAppUrl } from "@/lib/app-url";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { isDevFeaturesEnabled } from "@/lib/auth/dev";
-import { getPrimaryAuthLabel, usesGoogleAuth } from "@/lib/auth/providers";
+import { getPrimaryAuthLabel, oauthDisplayNameFromUser, usesGoogleAuth } from "@/lib/auth/providers";
 import { loadYearbookInvites } from "@/lib/yearbook/invites";
 import { isUuid, normalizeUsername } from "@/lib/username";
 
@@ -119,19 +120,30 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   const signInEmail = user.email?.toLowerCase() ?? "";
   const usesGoogle = usesGoogleAuth(user);
+  const googleDisplayName = oauthDisplayNameFromUser(user);
 
   if (signInEmail && profile.email?.toLowerCase() !== signInEmail) {
     await supabase.from("profiles").update({ email: signInEmail }).eq("id", user.id);
   }
 
+  if (
+    googleDisplayName &&
+    (!profile.display_name.trim() || profile.display_name === "New Graduate")
+  ) {
+    await supabase.from("profiles").update({ display_name: googleDisplayName }).eq("id", user.id);
+    profile.display_name = googleDisplayName;
+  }
+
   const invites = await loadYearbookInvites(supabase, yearbook.id);
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
 
   return (
     <DashboardShell profileUsername={profile.username} userName={profile.display_name}>
       <div className="space-y-8">
         <ProfileSettingsForm
           authLabel={getPrimaryAuthLabel(user)}
+          displayName={profile.display_name}
+          googleDisplayName={googleDisplayName}
           graduationClass={profile.graduation_class}
           returnUsername={profile.username}
           signInEmail={signInEmail}

@@ -15,3 +15,25 @@ export function getPrimaryAuthLabel(user: User) {
 
   return "Account";
 }
+
+/** Name from Google (or other OAuth) metadata, when available. */
+export function oauthDisplayNameFromUser(user: User): string | null {
+  const metadata = user.user_metadata;
+  if (!metadata || typeof metadata !== "object") {
+    return null;
+  }
+
+  const candidates = [
+    metadata.full_name,
+    metadata.name,
+    metadata.display_name,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}

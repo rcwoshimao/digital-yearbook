@@ -90,6 +90,7 @@ a {
   box-sizing: border-box;
   border: 2px dotted var(--yearbook-ink);
   overflow: hidden;
+  touch-action: none;
 }
 
 /* Border lives on __surface so Fabric canvas pixels cannot paint over bottom/right edges */

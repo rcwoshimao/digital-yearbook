@@ -1,5 +1,40 @@
 # Auth troubleshooting
 
+## Google login sends me to Workers instead of localhost
+
+This is almost always **Supabase URL configuration**, not the git branch.
+
+**What happens**
+
+1. You start sign-in on `http://localhost:3000` (or a LAN IP like `http://192.168.x.x:3000`).
+2. The app asks Supabase to return to `http://localhost:3000/auth/callback`.
+3. If that URL is **not** on Supabase’s allow list, Supabase falls back to **Site URL** (often your Workers URL).
+
+**Fix in Supabase Dashboard → Authentication → URL configuration**
+
+1. **Redirect URLs** — add **all** of these (one per line):
+
+```text
+http://localhost:3000/**
+http://127.0.0.1:3000/**
+https://digital-yearbook.rebeccachencjy.workers.dev/**
+```
+
+(If wildcards are disabled in your project, use exact paths: `http://localhost:3000/auth/callback`, etc.)
+
+2. **Site URL** — can stay your production Workers URL for deployed users. Local dev still works as long as `localhost` redirect URLs are allowed.
+
+3. Restart `npm run dev` and sign in only from **http://localhost:3000/login** (not the Network IP from the terminal, not Workers).
+
+**App behavior (dev)**
+
+- `npm run dev` forces OAuth `redirectTo` to `http://localhost:3000/auth/callback`.
+- Middleware redirects LAN IPs (`192.168.x.x:3000`) to `localhost:3000` in development.
+
+**Google Cloud** — keep redirect URI as `https://rdvrzqgbgbkgivdbyetx.supabase.co/auth/v1/callback` only (see `docs/google-auth-setup.md`).
+
+---
+
 ## Cannot log in as `user2` (or username login fails)
 
 **Common causes**

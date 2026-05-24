@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signOut } from "@/app/auth/actions";
+import { DashboardNav } from "@/components/layout/dashboard-nav";
 import { UserMenu } from "@/components/layout/user-menu";
 
 type DashboardShellProps = {
@@ -16,15 +17,10 @@ export function DashboardShell({ children, profileUsername, userName }: Dashboar
           <Link href="/dashboard" className="text-xl font-black tracking-tight">
             Digital Yearbook
           </Link>
-          <nav className="flex flex-wrap items-center gap-3 text-sm font-medium text-stone-700">
-            <Link className="rounded-full bg-white px-4 py-2 shadow-sm" href="/dashboard">
-              My Yearbook
-            </Link>
-            <Link className="rounded-full px-4 py-2 hover:bg-white/70" href="/write">
-              Sign Yearbooks
-            </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <DashboardNav />
             <UserMenu profileUsername={profileUsername} signOutAction={signOut} userName={userName} />
-          </nav>
+          </div>
         </header>
         {children}
       </div>

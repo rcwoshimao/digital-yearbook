@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Canvas, FabricImage, IText, Textbox, type FabricObject } from "fabric";
+import { Canvas, FabricImage, IText, Path, Textbox, type FabricObject } from "fabric";
 import { submitCanvasEntry } from "@/app/yearbook/[yearbookId]/write/actions";
 import {
   Dialog,
@@ -15,6 +15,12 @@ import {
   normalizeCanvasBackground,
 } from "@/lib/canvas/background-image";
 import { clearDraft, hasDraft, loadDraftCanvas, saveDraft } from "@/lib/canvas/draft-store";
+import {
+  applyEditorTool,
+  bindEraserHandlers,
+  isInkPath,
+  type EditorTool,
+} from "@/lib/canvas/free-drawing";
 import {
   exportPageImage,
   exportPageImageForSubmit,
@@ -32,6 +38,7 @@ import {
   preloadCanvasFonts,
 } from "@/lib/yearbook/canvas-fonts";
 import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
+import { HandwritingToolbar } from "@/components/forms/handwriting-toolbar";
 import { StickerPickerDialog } from "@/components/forms/sticker-picker-dialog";
 import { useNotification } from "@/components/providers/notification-provider";
 import { SignedPageMetadata } from "@/components/yearbook/signed-page-metadata";
@@ -74,7 +81,11 @@ export function CanvasEntryEditor({
   const hasPreviewedRef = useRef(false);
 
   const [isMobile, setIsMobile] = useState(false);
-  const [selectionKind, setSelectionKind] = useState<"text" | "image" | null>(null);
+  const [editorTool, setEditorTool] = useState<EditorTool>("pen");
+  const [penColor, setPenColor] = useState<string>(YEARBOOK_THEME_FALLBACKS.ink);
+  const [penWidth, setPenWidth] = useState(3);
+  const [selectionKind, setSelectionKind] = useState<"text" | "image" | "path" | null>(null);
+  const editorToolRef = useRef<EditorTool>("pen");
   const [selectedText, setSelectedText] = useState<EditableText | null>(null);
   const [fontFamily, setFontFamily] = useState<string>(CANVAS_FONT_OPTIONS[0].value);
   const [fontSize, setFontSize] = useState(20);
@@ -217,6 +228,9 @@ export function CanvasEntryEditor({
         } else if (isCanvasImage(active)) {
           setSelectedText(null);
           setSelectionKind("image");
+        } else if (isInkPath(active)) {
+          setSelectedText(null);
+          setSelectionKind("path");
         } else {
           setSelectedText(null);
           setSelectionKind(null);
@@ -253,11 +267,25 @@ export function CanvasEntryEditor({
   }, []);
 
   useEffect(() => {
+    editorToolRef.current = editorTool;
+  }, [editorTool]);
+
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas || !canvasReady) {
+      return;
+    }
+
+    applyEditorTool(canvas, editorTool, penColor, penWidth);
+  }, [canvasReady, editorTool, penColor, penWidth]);
+
+  useEffect(() => {
     if (isMobile || !canvasElementRef.current) {
       return;
     }
 
     let disposed = false;
+    let unbindEraser: (() => void) | undefined;
 
     void (async () => {
       await preloadCanvasFonts();
@@ -275,6 +303,10 @@ export function CanvasEntryEditor({
 
       fabricRef.current = canvas;
       bindCanvasEvents(canvas);
+      applyEditorTool(canvas, editorToolRef.current, penColor, penWidth);
+      unbindEraser = bindEraserHandlers(canvas, () => editorToolRef.current, () => {
+        pushHistory(canvas);
+      });
       pushHistory(canvas);
       setCanvasReady(true);
 
@@ -285,6 +317,7 @@ export function CanvasEntryEditor({
 
     return () => {
       disposed = true;
+      unbindEraser?.();
       fabricRef.current?.dispose();
       fabricRef.current = null;
       setCanvasReady(false);
@@ -397,6 +430,8 @@ export function CanvasEntryEditor({
       return;
     }
 
+    setEditorTool("select");
+
     const text = new Textbox("Double-click to edit", {
       left: 48,
       top: 48,
@@ -441,11 +476,14 @@ export function CanvasEntryEditor({
       return;
     }
 
+    setEditorTool("select");
+
     const dataUrl = await readFileAsDataUrl(file);
     await addImageToCanvas(dataUrl, 0.6);
   }
 
   async function addStickerFromUrl(src: string) {
+    setEditorTool("select");
     await addImageToCanvas(src, 0.28);
   }
 
@@ -670,8 +708,16 @@ export function CanvasEntryEditor({
       />
 
       <div className="canvas-editor-stage">
+        <HandwritingToolbar
+          editorTool={editorTool}
+          onEditorToolChange={setEditorTool}
+          onPenColorChange={setPenColor}
+          onPenWidthChange={setPenWidth}
+          penColor={penColor}
+          penWidth={penWidth}
+        />
         <p className="mb-3 text-center text-sm text-stone-600">
-          Edit your page below — your name and school details appear automatically at the bottom
+          Draw or write on the page — your name and school details appear automatically at the bottom
           (same as in the yearbook).
         </p>
         <div
@@ -964,7 +1010,7 @@ function SelectionToolbar({
   onFontFamilyChange: (value: string) => void;
   onFontSizeChange: (value: number) => void;
   onTextColorChange: (value: string) => void;
-  selectionKind: "text" | "image" | null;
+  selectionKind: "text" | "image" | "path" | null;
   textColor: string;
 }) {
   const isVisible = selectionKind !== null;
@@ -976,6 +1022,9 @@ function SelectionToolbar({
         isVisible ? "opacity-100" : "pointer-events-none opacity-0"
       }`}
     >
+      {selectionKind === "path" ? (
+        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Handwriting</p>
+      ) : null}
       {selectionKind === "text" ? (
         <>
           <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Text</p>
@@ -1039,8 +1088,10 @@ function isCanvasImage(object: FabricObject | null | undefined): object is Fabri
   return object instanceof FabricImage;
 }
 
-function isDeletableCanvasObject(object: FabricObject): object is EditableText | FabricImage {
-  return isEditableText(object) || isCanvasImage(object);
+function isDeletableCanvasObject(
+  object: FabricObject,
+): object is EditableText | FabricImage | Path {
+  return isEditableText(object) || isCanvasImage(object) || isInkPath(object);
 }
 
 function fixCanvasTextFontFamilies(canvas: Canvas) {

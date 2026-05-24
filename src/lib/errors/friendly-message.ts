@@ -6,6 +6,7 @@ export type FriendlyErrorContext =
   | "entry_upload"
   | "generic"
   | "invite"
+  | "profile_display_name"
   | "profile_school"
   | "profile_username"
   | "revoke_invite"
@@ -89,6 +90,7 @@ function messageForRls(context: FriendlyErrorContext): string {
     case "entry_submit":
     case "entry_upload":
       return "You don't have permission to submit to this yearbook. Make sure you're signed in and invited.";
+    case "profile_display_name":
     case "profile_school":
     case "profile_username":
       return "You don't have permission to update this profile.";
@@ -151,6 +153,8 @@ function fallbackForContext(context: FriendlyErrorContext): string {
       return "Could not update sharing settings. Please try again.";
     case "profile_username":
       return "Could not update your username. Please try again.";
+    case "profile_display_name":
+      return "Could not update your name. Please try again.";
     case "profile_school":
       return "Could not update your school details. Please try again.";
     case "entry_submit":
