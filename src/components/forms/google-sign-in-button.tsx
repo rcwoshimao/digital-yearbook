@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getAuthCallbackUrl } from "@/lib/app-url";
+import { getClientAuthCallbackUrl } from "@/lib/app-url";
 import { createClient } from "@/lib/supabase/client";
 import { useNotification } from "@/components/providers/notification-provider";
 import { friendlyErrorMessage } from "@/lib/errors/friendly-message";
@@ -25,7 +25,7 @@ export function GoogleSignInButton({
 
     try {
       const supabase = createClient();
-      const redirectTo = getAuthCallbackUrl(nextPath);
+      const redirectTo = getClientAuthCallbackUrl(nextPath);
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

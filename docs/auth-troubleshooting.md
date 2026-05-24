@@ -26,10 +26,11 @@ https://digital-yearbook.rebeccachencjy.workers.dev/**
 
 3. Restart `npm run dev` and sign in only from **http://localhost:3000/login** (not the Network IP from the terminal, not Workers).
 
-**App behavior (dev)**
+**App behavior**
 
-- `npm run dev` forces OAuth `redirectTo` to `http://localhost:3000/auth/callback`.
-- Middleware redirects LAN IPs (`192.168.x.x:3000`) to `localhost:3000` in development.
+- Google sign-in uses the **current browser origin** (`window.location.origin`), so production Workers login returns to Workers, not a baked-in localhost URL.
+- In dev, LAN IPs (`192.168.x.x:3000`) still map OAuth to `http://localhost:3000/auth/callback` for Supabase.
+- Middleware redirects LAN IPs to `localhost:3000` in development.
 
 **Google Cloud** — keep redirect URI as `https://rdvrzqgbgbkgivdbyetx.supabase.co/auth/v1/callback` only (see `docs/google-auth-setup.md`).
 
