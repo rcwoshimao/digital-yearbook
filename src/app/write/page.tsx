@@ -32,7 +32,7 @@ export default async function WriteHubPage() {
     );
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -86,7 +86,7 @@ export default async function WriteHubPage() {
 }
 
 async function loadWriteHubRows(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   targetIds: string[],
   currentUserId: string,
   signedAtByYearbookId: Map<string, string>,

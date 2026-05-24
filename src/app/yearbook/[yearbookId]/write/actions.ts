@@ -14,7 +14,7 @@ function writeErrorUrl(ownerUsername: string, message: string) {
 }
 
 async function uploadEntryPageImage(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   objectPath: string,
   bytes: Buffer,
   contentType: string,
@@ -60,7 +60,7 @@ export async function submitCanvasEntry(formData: FormData) {
     redirect(writeErrorUrl(ownerUsername, "The page image must be 10MB or smaller."));
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

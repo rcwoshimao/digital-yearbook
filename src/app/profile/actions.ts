@@ -37,7 +37,7 @@ export async function updateUsername(formData: FormData) {
     );
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -86,7 +86,7 @@ export async function updateSchool(formData: FormData) {
     redirect("/login");
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

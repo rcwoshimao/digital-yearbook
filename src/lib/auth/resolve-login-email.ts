@@ -12,7 +12,7 @@ export async function resolveLoginEmail(identifier: string) {
     return trimmed.toLowerCase();
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_email_for_login", {
     identifier: trimmed,
   });

@@ -10,9 +10,9 @@ import { loadYearbookInvites } from "@/lib/yearbook/invites";
 import { isUuid, normalizeUsername } from "@/lib/username";
 
 type ProfilePageProps = {
-  params: {
+  params: Promise<{
     username: string;
-  };
+  }>;
 };
 
 type YearbookRow = {
@@ -21,13 +21,14 @@ type YearbookRow = {
 };
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
-  const slug = normalizeUsername(params.username);
+  const { username } = await params;
+  const slug = normalizeUsername(username);
 
   if (!hasSupabaseEnv) {
     redirect("/login");
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

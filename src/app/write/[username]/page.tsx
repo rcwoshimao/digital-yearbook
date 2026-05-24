@@ -10,13 +10,14 @@ import { createClient } from "@/lib/supabase/server";
 import { isUuid, normalizeUsername } from "@/lib/username";
 
 type WriteEntryPageProps = {
-  params: {
+  params: Promise<{
     username: string;
-  };
+  }>;
 };
 
 export default async function WriteEntryPage({ params }: WriteEntryPageProps) {
-  const slug = normalizeUsername(params.username);
+  const { username } = await params;
+  const slug = normalizeUsername(username);
 
   if (!hasSupabaseEnv) {
     return (
@@ -31,7 +32,7 @@ export default async function WriteEntryPage({ params }: WriteEntryPageProps) {
     );
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -14,7 +14,7 @@ function ownerRedirect(formData: FormData, message: string): never {
   redirect(`${safePath}${separator}${param}=${encodeURIComponent(message)}`);
 }
 
-async function revalidateOwnerViews(supabase: ReturnType<typeof createClient>) {
+async function revalidateOwnerViews(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -42,7 +42,7 @@ export async function updateShareMode(formData: FormData) {
     ownerRedirect(formData, "Invalid share mode request.");
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase
     .from("yearbooks")
     .update({ share_mode: shareMode })
@@ -67,7 +67,7 @@ export async function addInvite(formData: FormData) {
     ownerRedirect(formData, "Usernames can only contain lowercase letters, numbers, and underscores.");
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -116,7 +116,7 @@ export async function revokeInvite(formData: FormData) {
     ownerRedirect(formData, "Invalid invite revoke request.");
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase
     .from("yearbook_invites")
     .delete()

@@ -41,7 +41,7 @@ export async function signIn(formData: FormData) {
     redirect(encodedMessage("auth_error", "No account found for that email or username."));
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
@@ -81,7 +81,7 @@ export async function signUp(formData: FormData) {
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -116,7 +116,7 @@ export async function signUp(formData: FormData) {
 
 export async function signOut() {
   if (hasSupabaseEnv) {
-    const supabase = createClient();
+    const supabase = await createClient();
     await supabase.auth.signOut();
   }
 

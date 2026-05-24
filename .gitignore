@@ -1,8 +1,11 @@
 node_modules
 .next
+.open-next
+.wrangler
 out
 dist
 .env*.local
+.dev.vars
 .env
 .env.*
 .env.example

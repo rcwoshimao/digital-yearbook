@@ -7,7 +7,7 @@ Full-stack graduation yearbook app built with Next.js, Tailwind CSS, and Supabas
 1. Install dependencies with `npm install`.
 2. Copy `.env.example` to `.env.local` and add Supabase credentials.
 3. Run the development server with `npm run dev`.
-4. See `DEPLOYMENT.md` before deploying to Cloudflare Pages.
+4. See `docs/cloudflare-deploy.md` before deploying to Cloudflare Workers.
 
 ## Current Build Step
 
