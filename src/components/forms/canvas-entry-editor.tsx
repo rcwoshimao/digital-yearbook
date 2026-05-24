@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Canvas, FabricImage, IText, Path, Textbox, type FabricObject } from "fabric";
+import { Canvas, FabricImage, IText, Textbox, type FabricObject } from "fabric";
 import { submitCanvasEntry } from "@/app/yearbook/[yearbookId]/write/actions";
 import {
   Dialog,
@@ -16,9 +16,14 @@ import {
 } from "@/lib/canvas/background-image";
 import { clearDraft, hasDraft, loadDraftCanvas, saveDraft } from "@/lib/canvas/draft-store";
 import {
+  isEditableText,
+  removeActiveSelection,
+  resolveCanvasSelection,
+  type CanvasSelectionKind,
+} from "@/lib/canvas/canvas-selection";
+import {
   applyEditorTool,
   bindEraserHandlers,
-  isInkPath,
   type EditorTool,
 } from "@/lib/canvas/free-drawing";
 import {
@@ -40,6 +45,7 @@ import {
 import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
 import { CanvasContextToolbar } from "@/components/forms/canvas-context-toolbar";
 import { CanvasDocumentSidebar } from "@/components/forms/canvas-document-sidebar";
+import { FlaticonAttribution } from "@/components/forms/flaticon-attribution";
 import { CanvasToolRail } from "@/components/forms/canvas-tool-rail";
 import { StickerPickerDialog } from "@/components/forms/sticker-picker-dialog";
 import { useNotification } from "@/components/providers/notification-provider";
@@ -86,7 +92,8 @@ export function CanvasEntryEditor({
   const [editorTool, setEditorTool] = useState<EditorTool>("select");
   const [penColor, setPenColor] = useState<string>(YEARBOOK_THEME_FALLBACKS.ink);
   const [penWidth, setPenWidth] = useState(3);
-  const [selectionKind, setSelectionKind] = useState<"text" | "image" | "path" | null>(null);
+  const [selectionKind, setSelectionKind] = useState<CanvasSelectionKind>(null);
+  const [selectionCount, setSelectionCount] = useState(0);
   const editorToolRef = useRef<EditorTool>("select");
   const [selectedText, setSelectedText] = useState<EditableText | null>(null);
   const [fontFamily, setFontFamily] = useState<string>(CANVAS_FONT_OPTIONS[0].value);
@@ -180,6 +187,12 @@ export function CanvasEntryEditor({
     [pushHistory, selectedText],
   );
 
+  const clearSelectionState = useCallback(() => {
+    setSelectionKind(null);
+    setSelectionCount(0);
+    setSelectedText(null);
+  }, []);
+
   const deleteSelected = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas) {
@@ -187,21 +200,14 @@ export function CanvasEntryEditor({
     }
 
     const active = canvas.getActiveObject();
-    if (!active || !isDeletableCanvasObject(active)) {
+    if (!active || resolveCanvasSelection(active).kind === null) {
       return;
     }
 
-    if (isEditableText(active) && active.isEditing) {
-      return;
-    }
-
-    canvas.remove(active);
-    canvas.discardActiveObject();
-    canvas.requestRenderAll();
-    setSelectionKind(null);
-    setSelectedText(null);
+    removeActiveSelection(canvas, active);
+    clearSelectionState();
     pushHistory(canvas);
-  }, [pushHistory]);
+  }, [clearSelectionState, pushHistory]);
 
   const bindCanvasEvents = useCallback(
     (canvas: Canvas) => {
@@ -224,27 +230,21 @@ export function CanvasEntryEditor({
 
       const handleSelection = () => {
         const active = canvas.getActiveObject();
-        if (isEditableText(active)) {
-          syncTextToolbar(active);
-          setSelectionKind("text");
-        } else if (isCanvasImage(active)) {
-          setSelectedText(null);
-          setSelectionKind("image");
-        } else if (isInkPath(active)) {
-          setSelectedText(null);
-          setSelectionKind("path");
+        const resolved = resolveCanvasSelection(active);
+
+        setSelectionKind(resolved.kind);
+        setSelectionCount(resolved.count);
+
+        if (resolved.selectedText) {
+          syncTextToolbar(resolved.selectedText);
         } else {
           setSelectedText(null);
-          setSelectionKind(null);
         }
       };
 
       canvas.on("selection:created", handleSelection);
       canvas.on("selection:updated", handleSelection);
-      canvas.on("selection:cleared", () => {
-        setSelectedText(null);
-        setSelectionKind(null);
-      });
+      canvas.on("selection:cleared", clearSelectionState);
 
       canvas.on("text:editing:exited", (event) => {
         const target = event.target;
@@ -255,7 +255,7 @@ export function CanvasEntryEditor({
         syncTextObjectCharacterStyles(target);
       });
     },
-    [pushHistory, syncTextToolbar],
+    [clearSelectionState, pushHistory, syncTextToolbar],
   );
 
   useEffect(() => {
@@ -300,6 +300,7 @@ export function CanvasEntryEditor({
         width: PAGE_WIDTH,
         height: PAGE_HEIGHT,
         backgroundColor: "#ffffff",
+        selection: true,
         ...getCanvasSelectionOptions(),
       });
 
@@ -688,6 +689,7 @@ export function CanvasEntryEditor({
             }}
             penColor={penColor}
             penWidth={penWidth}
+            selectionCount={selectionCount}
             selectionKind={selectionKind}
             textColor={textColor}
           />
@@ -755,6 +757,8 @@ export function CanvasEntryEditor({
           }}
         />
       </div>
+
+      <FlaticonAttribution className="mt-2" />
 
       <Dialog open={compileDialogOpen} onOpenChange={setCompileDialogOpen}>
         <DialogContent>
@@ -886,20 +890,6 @@ export function CanvasEntryEditor({
       </Dialog>
     </section>
   );
-}
-
-function isEditableText(object: FabricObject | null | undefined): object is EditableText {
-  return object instanceof Textbox || object instanceof IText;
-}
-
-function isCanvasImage(object: FabricObject | null | undefined): object is FabricImage {
-  return object instanceof FabricImage;
-}
-
-function isDeletableCanvasObject(
-  object: FabricObject,
-): object is EditableText | FabricImage | Path {
-  return isEditableText(object) || isCanvasImage(object) || isInkPath(object);
 }
 
 function fixCanvasTextFontFamilies(canvas: Canvas) {

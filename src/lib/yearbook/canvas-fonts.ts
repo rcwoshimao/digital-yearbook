@@ -295,7 +295,7 @@ export type CanvasFontOption = {
 };
 
 export const CANVAS_FONT_OPTIONS: CanvasFontOption[] = [
-  { label: "Classic Serif", value: "Georgia, 'Times New Roman', serif", keywords: ["georgia","times new roman"] },
+  { label: "Georgia", value: "Georgia, 'Times New Roman', serif", keywords: ["georgia", "times new roman", "classic serif"] },
   { label: "Arial", value: "Arial, Helvetica, sans-serif", keywords: ["arial","helvetica"] },
   { label: "Typewriter", value: "'Courier New', Courier, monospace", keywords: ["courier","mono"] },
   {
@@ -493,7 +493,7 @@ export const CANVAS_FONT_OPTIONS: CanvasFontOption[] = [
     value: "Playwrite England SemiJoined Guides, cursive",
     keywords: ["playwrite england semijoined guides","playwrite-england-semijoined-guides"],
   },
-];
+].sort((left, right) => left.label.localeCompare(right.label, "en", { sensitivity: "base", numeric: true }));
 
 export { canvasFontCaveat };
 

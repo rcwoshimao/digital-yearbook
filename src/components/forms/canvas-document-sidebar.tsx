@@ -51,8 +51,8 @@ export function CanvasDocumentSidebar({
         <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-stone-500">Page</p>
         <div className="mt-2 space-y-1">
           <label className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-700 transition hover:bg-stone-100">
-            <IconBackground className="h-4 w-4 shrink-0" />
-            <span className="flex-1">Background</span>
+            <IconBackground className="text-base" />
+            <span className="flex-1">Background Color</span>
             <input
               aria-label="Background color"
               className="h-7 w-9 cursor-pointer rounded border border-stone-300"
@@ -62,7 +62,7 @@ export function CanvasDocumentSidebar({
             />
           </label>
           <button className={sidebarButtonClass()} onClick={onBackgroundImage} type="button">
-            <IconBackgroundImage className="h-4 w-4 shrink-0" />
+            <IconBackgroundImage className="text-base" />
             Background image
           </button>
           <button className={sidebarButtonClass()} onClick={onClearBackgroundImage} type="button">
@@ -80,7 +80,7 @@ export function CanvasDocumentSidebar({
             onClick={onUndo}
             type="button"
           >
-            <IconUndo className="h-4 w-4 shrink-0" />
+            <IconUndo className="text-base" />
             Undo
           </button>
           <button
@@ -89,7 +89,7 @@ export function CanvasDocumentSidebar({
             onClick={onRedo}
             type="button"
           >
-            <IconRedo className="h-4 w-4 shrink-0" />
+            <IconRedo className="text-base" />
             Redo
           </button>
         </div>
@@ -97,11 +97,11 @@ export function CanvasDocumentSidebar({
 
       <div className="mt-auto space-y-1 border-t border-stone-200 pt-3">
         <button className={sidebarButtonClass()} onClick={onSaveDraft} type="button">
-          <IconSave className="h-4 w-4 shrink-0" />
+          <IconSave className="text-base" />
           Save draft
         </button>
         <button className={sidebarButtonClass("danger")} onClick={onReset} type="button">
-          <IconReset className="h-4 w-4 shrink-0" />
+          <IconReset className="text-base" />
           Reset board
         </button>
       </div>
