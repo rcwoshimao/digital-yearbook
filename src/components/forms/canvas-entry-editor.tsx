@@ -38,7 +38,9 @@ import {
   preloadCanvasFonts,
 } from "@/lib/yearbook/canvas-fonts";
 import { YEARBOOK_THEME_FALLBACKS } from "@/lib/yearbook/theme";
-import { HandwritingToolbar } from "@/components/forms/handwriting-toolbar";
+import { CanvasContextToolbar } from "@/components/forms/canvas-context-toolbar";
+import { CanvasDocumentSidebar } from "@/components/forms/canvas-document-sidebar";
+import { CanvasToolRail } from "@/components/forms/canvas-tool-rail";
 import { StickerPickerDialog } from "@/components/forms/sticker-picker-dialog";
 import { useNotification } from "@/components/providers/notification-provider";
 import { SignedPageMetadata } from "@/components/yearbook/signed-page-metadata";
@@ -81,11 +83,11 @@ export function CanvasEntryEditor({
   const hasPreviewedRef = useRef(false);
 
   const [isMobile, setIsMobile] = useState(false);
-  const [editorTool, setEditorTool] = useState<EditorTool>("pen");
+  const [editorTool, setEditorTool] = useState<EditorTool>("select");
   const [penColor, setPenColor] = useState<string>(YEARBOOK_THEME_FALLBACKS.ink);
   const [penWidth, setPenWidth] = useState(3);
   const [selectionKind, setSelectionKind] = useState<"text" | "image" | "path" | null>(null);
-  const editorToolRef = useRef<EditorTool>("pen");
+  const editorToolRef = useRef<EditorTool>("select");
   const [selectedText, setSelectedText] = useState<EditableText | null>(null);
   const [fontFamily, setFontFamily] = useState<string>(CANVAS_FONT_OPTIONS[0].value);
   const [fontSize, setFontSize] = useState(20);
@@ -620,63 +622,11 @@ export function CanvasEntryEditor({
         </div>
       ) : null}
 
-      <MainToolbar
-        backgroundColor={backgroundColor}
-        canRedo={canRedo}
-        canUndo={canUndo}
-        onAddImage={() => imageInputRef.current?.click()}
-        onAddStickers={() => setStickerPickerOpen(true)}
-        onAddText={addText}
-        onBackgroundColorChange={updateBackgroundColor}
-        onBackgroundImage={() => backgroundInputRef.current?.click()}
-        onClearBackgroundImage={clearBackgroundImage}
-        onRedo={() => {
-          const canvas = fabricRef.current;
-          if (!canvas || historyIndexRef.current >= historyRef.current.length - 1) {
-            return;
-          }
-
-          void restoreHistory(canvas, historyIndexRef.current + 1);
-        }}
-        onReset={() => setResetConfirmOpen(true)}
-        onSaveDraft={() => void saveDraftToStorage()}
-        onUndo={() => {
-          const canvas = fabricRef.current;
-          if (!canvas || historyIndexRef.current <= 0) {
-            return;
-          }
-
-          void restoreHistory(canvas, historyIndexRef.current - 1);
-        }}
-      />
-
       <StickerPickerDialog
         onOpenChange={setStickerPickerOpen}
         onSelectSticker={(src) => void addStickerFromUrl(src)}
         open={stickerPickerOpen}
       />
-
-      <div className="selection-toolbar-slot">
-        <SelectionToolbar
-          fontFamily={fontFamily}
-          fontSize={fontSize}
-          onDelete={deleteSelected}
-          onFontFamilyChange={(value) => {
-            setFontFamily(value);
-            applyTextStyleUpdates({ fontFamily: value });
-          }}
-          onFontSizeChange={(value) => {
-            setFontSize(value);
-            applyTextStyleUpdates({ fontSize: value });
-          }}
-          onTextColorChange={(value) => {
-            setTextColor(value);
-            applyTextStyleUpdates({ fill: value });
-          }}
-          selectionKind={selectionKind}
-          textColor={textColor}
-        />
-      </div>
 
       <input
         accept="image/*"
@@ -707,49 +657,104 @@ export function CanvasEntryEditor({
         type="file"
       />
 
-      <div className="canvas-editor-stage">
-        <HandwritingToolbar
+      <div className="canvas-editor-workspace">
+        <CanvasToolRail
           editorTool={editorTool}
-          onEditorToolChange={setEditorTool}
-          onPenColorChange={setPenColor}
-          onPenWidthChange={setPenWidth}
-          penColor={penColor}
-          penWidth={penWidth}
+          onAddImage={() => imageInputRef.current?.click()}
+          onAddStickers={() => setStickerPickerOpen(true)}
+          onAddText={addText}
+          onToolChange={setEditorTool}
         />
-        <p className="mb-3 text-center text-sm text-stone-600">
-          Draw or write on the page — your name and school details appear automatically at the bottom
-          (same as in the yearbook).
-        </p>
-        <div
-          className="canvas-editor-stage__surface"
-          data-canvas-ready={canvasReady ? "true" : "false"}
-          style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT }}
-        >
-          {!canvasReady ? (
-            <div
-              aria-hidden
-              className="canvas-editor-stage__placeholder absolute inset-0 bg-white"
-            />
-          ) : null}
-          <canvas ref={canvasElementRef} />
-          {canvasReady ? (
-            <SignedPageMetadata
-              authorClass={authorClass}
-              authorName={authorName}
-              authorUniversity={authorUniversity}
-              className="opacity-80"
-            />
-          ) : null}
-        </div>
-      </div>
 
-      <button
-        className="mt-6 rounded-full bg-yearbook-ink px-5 py-3 text-sm font-semibold text-white"
-        onClick={() => setCompileDialogOpen(true)}
-        type="button"
-      >
-        Preview page
-      </button>
+        <div className="canvas-editor-main flex min-w-0 flex-1 flex-col items-center">
+          <CanvasContextToolbar
+            editorTool={editorTool}
+            fontFamily={fontFamily}
+            fontSize={fontSize}
+            onDelete={deleteSelected}
+            onFontFamilyChange={(value) => {
+              setFontFamily(value);
+              applyTextStyleUpdates({ fontFamily: value });
+            }}
+            onFontSizeChange={(value) => {
+              setFontSize(value);
+              applyTextStyleUpdates({ fontSize: value });
+            }}
+            onPenColorChange={setPenColor}
+            onPenWidthChange={setPenWidth}
+            onTextColorChange={(value) => {
+              setTextColor(value);
+              applyTextStyleUpdates({ fill: value });
+            }}
+            penColor={penColor}
+            penWidth={penWidth}
+            selectionKind={selectionKind}
+            textColor={textColor}
+          />
+
+          <div className="canvas-editor-stage mt-3">
+            <p className="mb-3 text-center text-sm text-stone-600">
+              Your name and school details appear automatically at the bottom of the page.
+            </p>
+            <div
+              className="canvas-editor-stage__surface"
+              data-canvas-ready={canvasReady ? "true" : "false"}
+              style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT }}
+            >
+              {!canvasReady ? (
+                <div
+                  aria-hidden
+                  className="canvas-editor-stage__placeholder absolute inset-0 bg-white"
+                />
+              ) : null}
+              <canvas ref={canvasElementRef} />
+              {canvasReady ? (
+                <SignedPageMetadata
+                  authorClass={authorClass}
+                  authorName={authorName}
+                  authorUniversity={authorUniversity}
+                  className="opacity-80"
+                />
+              ) : null}
+            </div>
+          </div>
+
+          <button
+            className="mt-6 rounded-full bg-yearbook-ink px-5 py-3 text-sm font-semibold text-white"
+            onClick={() => setCompileDialogOpen(true)}
+            type="button"
+          >
+            Preview page
+          </button>
+        </div>
+
+        <CanvasDocumentSidebar
+          backgroundColor={backgroundColor}
+          canRedo={canRedo}
+          canUndo={canUndo}
+          onBackgroundColorChange={updateBackgroundColor}
+          onBackgroundImage={() => backgroundInputRef.current?.click()}
+          onClearBackgroundImage={clearBackgroundImage}
+          onRedo={() => {
+            const canvas = fabricRef.current;
+            if (!canvas || historyIndexRef.current >= historyRef.current.length - 1) {
+              return;
+            }
+
+            void restoreHistory(canvas, historyIndexRef.current + 1);
+          }}
+          onReset={() => setResetConfirmOpen(true)}
+          onSaveDraft={() => void saveDraftToStorage()}
+          onUndo={() => {
+            const canvas = fabricRef.current;
+            if (!canvas || historyIndexRef.current <= 0) {
+              return;
+            }
+
+            void restoreHistory(canvas, historyIndexRef.current - 1);
+          }}
+        />
+      </div>
 
       <Dialog open={compileDialogOpen} onOpenChange={setCompileDialogOpen}>
         <DialogContent>
@@ -880,203 +885,6 @@ export function CanvasEntryEditor({
         </DialogContent>
       </Dialog>
     </section>
-  );
-}
-
-function MainToolbar({
-  backgroundColor,
-  canRedo,
-  canUndo,
-  onAddImage,
-  onAddStickers,
-  onAddText,
-  onBackgroundColorChange,
-  onBackgroundImage,
-  onClearBackgroundImage,
-  onRedo,
-  onReset,
-  onSaveDraft,
-  onUndo,
-}: {
-  backgroundColor: string;
-  canRedo: boolean;
-  canUndo: boolean;
-  onAddImage: () => void;
-  onAddStickers: () => void;
-  onAddText: () => void;
-  onBackgroundColorChange: (color: string) => void;
-  onBackgroundImage: () => void;
-  onClearBackgroundImage: () => void;
-  onRedo: () => void;
-  onReset: () => void;
-  onSaveDraft: () => void;
-  onUndo: () => void;
-}) {
-  return (
-    <div className="mb-4 flex flex-wrap gap-3">
-      <button
-        className="rounded-full bg-yearbook-ink px-4 py-2 text-xs font-semibold text-white"
-        onClick={onAddText}
-        type="button"
-      >
-        Add Text
-      </button>
-      <button
-        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700"
-        onClick={onAddImage}
-        type="button"
-      >
-        Add Image
-      </button>
-      <button
-        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700"
-        onClick={onAddStickers}
-        type="button"
-      >
-        Stickers
-      </button>
-      <label className="flex items-center gap-2 text-xs font-semibold text-stone-700">
-        Background
-        <input
-          className="h-8 w-10 cursor-pointer rounded border border-stone-300"
-          onChange={(event) => onBackgroundColorChange(event.target.value)}
-          type="color"
-          value={backgroundColor}
-        />
-      </label>
-      <button
-        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700"
-        onClick={onBackgroundImage}
-        type="button"
-      >
-        Background Image
-      </button>
-      <button
-        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700"
-        onClick={onClearBackgroundImage}
-        type="button"
-      >
-        Clear background image
-      </button>
-      <button
-        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 disabled:opacity-50"
-        disabled={!canUndo}
-        onClick={onUndo}
-        type="button"
-      >
-        Undo
-      </button>
-      <button
-        className="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 disabled:opacity-50"
-        disabled={!canRedo}
-        onClick={onRedo}
-        type="button"
-      >
-        Redo
-      </button>
-      <button
-        className="rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-700"
-        onClick={onReset}
-        type="button"
-      >
-        Reset Board
-      </button>
-      <button
-        className="rounded-full border border-yearbook-accent px-4 py-2 text-xs font-semibold text-yearbook-accent"
-        onClick={onSaveDraft}
-        type="button"
-      >
-        Save Draft
-      </button>
-
-    </div>
-  );
-}
-
-
-function SelectionToolbar({
-  fontFamily,
-  fontSize,
-  onDelete,
-  onFontFamilyChange,
-  onFontSizeChange,
-  onTextColorChange,
-  selectionKind,
-  textColor,
-}: {
-  fontFamily: string;
-  fontSize: number;
-  onDelete: () => void;
-  onFontFamilyChange: (value: string) => void;
-  onFontSizeChange: (value: number) => void;
-  onTextColorChange: (value: string) => void;
-  selectionKind: "text" | "image" | "path" | null;
-  textColor: string;
-}) {
-  const isVisible = selectionKind !== null;
-
-  return (
-    <div
-      aria-hidden={!isVisible}
-      className={`flex min-h-[3.75rem] flex-wrap items-center gap-3 rounded-2xl border border-stone-200 bg-yearbook-paper p-3 transition-opacity ${
-        isVisible ? "opacity-100" : "pointer-events-none opacity-0"
-      }`}
-    >
-      {selectionKind === "path" ? (
-        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Handwriting</p>
-      ) : null}
-      {selectionKind === "text" ? (
-        <>
-          <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Text</p>
-          <label className="text-xs font-semibold text-stone-700">
-            Font
-            <select
-              className="ml-2 rounded-lg border border-stone-300 px-2 py-1 text-xs"
-              onChange={(event) => onFontFamilyChange(event.target.value)}
-              value={fontFamily}
-            >
-              {CANVAS_FONT_OPTIONS.map((option) => (
-                <option key={option.label} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-stone-700">
-            Size
-            <input
-              className="ml-2 w-16 rounded-lg border border-stone-300 px-2 py-1 text-xs"
-              max={96}
-              min={10}
-              onChange={(event) => onFontSizeChange(Number(event.target.value))}
-              type="number"
-              value={fontSize}
-            />
-          </label>
-          <label className="flex items-center gap-2 text-xs font-semibold text-stone-700">
-            Color
-            <input
-              className="h-8 w-10 cursor-pointer rounded border border-stone-300"
-              onChange={(event) => onTextColorChange(event.target.value)}
-              type="color"
-              value={textColor}
-            />
-          </label>
-        </>
-      ) : null}
-      {selectionKind === "image" ? (
-        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Image</p>
-      ) : null}
-      {isVisible ? (
-        <button
-          className="ml-auto rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-700"
-          onClick={onDelete}
-          type="button"
-        >
-          Delete
-        </button>
-      ) : null}
-    </div>
   );
 }
 

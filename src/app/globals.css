@@ -75,7 +75,28 @@ a {
   margin-bottom: 1rem;
 }
 
-/* Canvas entry editor — single centered page, no extra grey chrome */
+/* Canvas entry editor — tool rail, page, document sidebar */
+.canvas-editor-workspace {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .canvas-editor-workspace {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1.25rem;
+  }
+}
+
+.canvas-editor-main {
+  width: 100%;
+}
+
 .canvas-editor-stage {
   display: flex;
   flex-direction: column;
