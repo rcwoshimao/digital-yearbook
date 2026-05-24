@@ -10,6 +10,7 @@
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf:upload": "opennextjs-cloudflare build && wrangler versions upload",
     "seed:dev": "node scripts/seed-dev-users.mjs",
     "reset:dev": "node scripts/reset-dev-environment.mjs"
   },
