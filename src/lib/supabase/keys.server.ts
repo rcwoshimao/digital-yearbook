@@ -50,10 +50,19 @@ export function validateServiceRoleKey(
   }
 
   if (!isSupabaseJwtKey(key)) {
+    const segmentCount = key.split(".").length;
+    const hint =
+      key.length < 100
+        ? `The server only received ${key.length} characters (the full key is usually 200+). It may be truncated in Cloudflare.`
+        : !key.startsWith("eyJ")
+          ? "The value does not start with eyJ — you may have pasted the project URL or the wrong key."
+          : segmentCount !== 3
+            ? `The value has ${segmentCount} dot-separated parts; a JWT must have exactly 3. Remove any extra text or line breaks.`
+            : "Remove surrounding quotes and redeploy after saving the secret.";
+
     return {
       ok: false,
-      reason:
-        "SUPABASE_SERVICE_ROLE_KEY is not a valid Supabase JWT. Copy the full service_role key from Supabase → Settings → API (starts with eyJ).",
+      reason: `SUPABASE_SERVICE_ROLE_KEY is not a valid Supabase JWT. ${hint} Copy the full legacy service_role key from Supabase → Settings → API (starts with eyJ, not sb_).`,
     };
   }
 

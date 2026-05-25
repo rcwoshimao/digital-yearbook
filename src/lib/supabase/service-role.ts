@@ -2,12 +2,18 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { validateServiceRoleKey } from "@/lib/supabase/keys.server";
 
+/** Strip common Cloudflare/dashboard paste issues (quotes, newlines, "Bearer "). */
 function normalizeEnv(value: string | undefined) {
   if (!value) {
     return undefined;
   }
 
-  return value.trim().replace(/^["']|["']$/g, "");
+  let normalized = value.trim().replace(/^["']|["']$/g, "");
+  normalized = normalized.replace(/^Bearer\s+/i, "");
+  // JWTs must not contain whitespace; dashboards often insert line breaks when pasting.
+  normalized = normalized.replace(/\s+/g, "");
+
+  return normalized.length > 0 ? normalized : undefined;
 }
 
 export function getServiceRoleKeyProblem(): string | null {
