@@ -146,7 +146,7 @@ async function loadWriteHubRows(
 
 function WriteHubShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="mx-auto min-h-screen max-w-5xl bg-yearbook-paper px-6 py-8">
+    <main className="mx-auto min-h-screen max-w-5xl px-6 py-8">
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link className="text-sm font-semibold text-yearbook-accent" href="/dashboard">
           ← Back to My Yearbook

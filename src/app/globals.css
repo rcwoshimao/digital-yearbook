@@ -7,13 +7,14 @@
 :root {
   color-scheme: light;
 
-  --yearbook-paper: #f5e9d5;
-  --yearbook-paper-deep: #b8b0a4;
+  --yearbook-paper: #ebe6e2;
+  --yearbook-paper-deep: #c4bbb4;
   --yearbook-ink: #27211b;
   --yearbook-accent: #8f5f35;
-  --yearbook-page: #fffdf5;
-  --yearbook-glow-warm: #fbd38d;
-  --yearbook-glow-rose: #f7b2ad;
+  --yearbook-page: #f8f5f3;
+  --yearbook-glow-warm: #c9a588;
+  --yearbook-glow-rose: #ddb8b5;
+  --app-background-overlay: rgba(185, 181, 176, 0.25);
 }
 
 * {
@@ -22,8 +23,24 @@
 
 body {
   margin: 0;
-  background: var(--yearbook-paper);
   color: var(--yearbook-ink);
+  background-color: var(--yearbook-paper);
+  background-image:
+    linear-gradient(var(--app-background-overlay), var(--app-background-overlay)),
+    url(/assets/background1.jpg);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+.login-page-bg {
+  background-image:
+    linear-gradient(var(--app-background-overlay), var(--app-background-overlay)),
+    url(/assets/background.jpg);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .yearbook-page-bg {

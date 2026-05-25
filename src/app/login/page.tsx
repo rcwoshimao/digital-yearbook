@@ -17,10 +17,7 @@ export default async function LoginPage() {
   }
 
   return (
-    <main
-      className="relative overflow-x-hidden bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url(/assets/background.jpg)" }}
-    >
+    <main className="login-page-bg relative min-h-screen overflow-x-hidden">
       <LoginHero isConfigured={hasSupabaseEnv} />
       <div id="features">
         <LoginFeatures />

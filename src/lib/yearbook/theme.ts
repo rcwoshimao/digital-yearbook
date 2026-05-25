@@ -8,11 +8,11 @@ export const YEARBOOK_CSS_VARS = {
 
 /** Fallbacks must match :root in src/app/globals.css */
 export const YEARBOOK_THEME_FALLBACKS = {
-  paper: "#c7c0b5",
-  paperDeep: "#b8b0a4",
+  paper: "#ebe6e2",
+  paperDeep: "#c4bbb4",
   ink: "#27211b",
   accent: "#8f5f35",
-  page: "#fffdf5",
+  page: "#f8f5f3",
 } as const;
 
 export function readYearbookCssVar(
