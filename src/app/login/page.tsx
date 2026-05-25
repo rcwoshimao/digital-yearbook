@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/forms/auth-form";
+import { AppBrand } from "@/components/layout/app-brand";
 import { hasDevEmailAuth, isDevFeaturesEnabled } from "@/lib/auth/dev";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -25,9 +26,13 @@ export default async function LoginPage() {
 
       <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-6xl flex-col items-center justify-center gap-10">
         <div className="max-w-2xl text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-yearbook-accent">
-            Digital Graduation Yearbook
-          </p>
+          <div className="mb-6 flex justify-center">
+            <AppBrand
+              className="inline-flex items-center gap-3 text-2xl font-black tracking-tight sm:text-3xl"
+              href="/"
+              iconSize={44}
+            />
+          </div>
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
             A warm place to collect the notes you will keep.
           </h1>

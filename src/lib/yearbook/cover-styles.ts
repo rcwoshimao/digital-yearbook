@@ -7,7 +7,7 @@ export type YearbookCoverStyle = {
   pattern: YearbookCoverPattern;
 };
 
-export const COVER_DAMASK_ASSET = "/cover.png";
+export const COVER_DAMASK_ASSET = "/assets/cover.png";
 
 export const defaultCoverStyle: YearbookCoverStyle = {
   background_color: "#e8e0d4",

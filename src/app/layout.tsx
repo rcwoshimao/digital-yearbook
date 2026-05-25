@@ -11,6 +11,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Digital Graduation Yearbook",
   description: "Write and collect permanent graduation yearbook entries.",
+  icons: {
+    apple: "/assets/icon.png",
+    icon: [{ type: "image/png", url: "/assets/icon.png" }],
+  },
 };
 
 export default function RootLayout({

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AppBrand } from "@/components/layout/app-brand";
 import {
   WriteHubYearbookTable,
   type WriteHubYearbookRow,
@@ -150,9 +151,7 @@ function WriteHubShell({ children }: { children: React.ReactNode }) {
         <Link className="text-sm font-semibold text-yearbook-accent" href="/dashboard">
           ← Back to My Yearbook
         </Link>
-        <Link className="text-xl font-bold" href="/dashboard">
-          Digital Yearbook
-        </Link>
+        <AppBrand className="inline-flex items-center gap-2.5 text-xl font-bold" />
       </header>
       {children}
     </main>
