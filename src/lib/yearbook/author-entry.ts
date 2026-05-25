@@ -117,9 +117,20 @@ export async function deleteAuthorEntriesForYearbook(
 }
 
 /** True when the stored entry has nothing useful to show in the viewer. */
-export function isEntryDisplayEmpty(entry: Pick<YearbookEntry, "pageImageUrl" | "pdfUrl" | "contentText" | "imageUrls">) {
+export function isEntryDisplayEmpty(
+  entry: Pick<
+    YearbookEntry,
+    "pageImageUrl" | "pageImageMissing" | "pdfUrl" | "contentText" | "imageUrls"
+  >,
+) {
   const hasText = Boolean(entry.contentText?.trim());
   const hasImages = entry.imageUrls.length > 0;
 
-  return !entry.pageImageUrl && !entry.pdfUrl && !hasText && !hasImages;
+  return (
+    !entry.pageImageUrl &&
+    !entry.pageImageMissing &&
+    !entry.pdfUrl &&
+    !hasText &&
+    !hasImages
+  );
 }

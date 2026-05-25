@@ -15,6 +15,18 @@ function chromelessPdfUrl(url: string) {
 }
 
 export function EntryPageContent({ entry, showSignedPageMetadata = true }: EntryPageContentProps) {
+  if (entry.pageImageMissing) {
+    return (
+      <article className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
+        <p className="text-lg font-bold text-stone-800">Page unavailable</p>
+        <p className="max-w-sm text-sm text-stone-600">
+          {entry.authorName}&apos;s page image is missing. They can delete their signature and sign
+          again.
+        </p>
+      </article>
+    );
+  }
+
   if (entry.pageImageUrl) {
     return (
       <article className="relative h-full w-full overflow-hidden">

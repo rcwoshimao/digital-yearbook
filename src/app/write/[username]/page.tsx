@@ -3,11 +3,10 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { CanvasEntryEditor } from "@/components/forms/canvas-entry-editor";
 import { ClearDraftOnEntryRemoved } from "@/components/yearbook/clear-draft-on-entry-removed";
+import { DeleteYearbookSignatureButton } from "@/components/yearbook/delete-yearbook-signature-button";
 import { EntryPageContent } from "@/components/yearbook/entry-page-content";
-import { RemoveYearbookEntryForm } from "@/components/yearbook/remove-yearbook-entry-form";
 import { BOOK_HEIGHT, BOOK_WIDTH } from "@/components/yearbook/flipbook-viewer";
 import { ENTRY_SELECT, type EntryRow, mapEntryRow, signEntryRowAssets } from "@/lib/yearbook/entries";
-import { isEntryDisplayEmpty } from "@/lib/yearbook/author-entry";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid, normalizeUsername } from "@/lib/username";
@@ -16,16 +15,11 @@ type WriteEntryPageProps = {
   params: Promise<{
     username: string;
   }>;
-  searchParams: Promise<{
-    replace?: string;
-  }>;
 };
 
-export default async function WriteEntryPage({ params, searchParams }: WriteEntryPageProps) {
+export default async function WriteEntryPage({ params }: WriteEntryPageProps) {
   const { username } = await params;
-  const { replace } = await searchParams;
   const slug = normalizeUsername(username);
-  const replaceExistingEntry = replace === "1";
 
   if (!hasSupabaseEnv) {
     return (
@@ -148,19 +142,17 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
     .returns<EntryRow[]>();
 
   const existingEntryRow = existingEntryRows?.[0] ?? null;
-  const duplicateEntryCount = existingEntryRows?.length ?? 0;
 
   const recipientName = ownerProfile.display_name;
   const recipientMeta =
     [ownerProfile.university, ownerProfile.graduation_class].filter(Boolean).join(" · ") ||
     "Profile details unavailable";
 
-  if (existingEntryRow && !replaceExistingEntry) {
+  if (existingEntryRow) {
     const signedEntry = mapEntryRow(
       existingEntryRow,
       await signEntryRowAssets(supabase, existingEntryRow),
     );
-    const pageMissing = isEntryDisplayEmpty(signedEntry);
 
     return (
       <WritePageShell mode="view-signed" ownerUsername={ownerProfile.username}>
@@ -170,21 +162,9 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
               You&apos;ve already signed {recipientName}&apos;s yearbook.
             </h2>
             <p className="mt-2 text-stone-700">
-              Signed on {format(signedEntry.createdAt, "PPP")}. Each yearbook can only receive one
-              note from you.
+              Signed on {format(signedEntry.createdAt, "PPP")}. Delete below to remove your page and
+              sign a new one.
             </p>
-            {pageMissing ? (
-              <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
-                Your saved page is missing or broken. Remove the old signature and sign again, or
-                replace it with a new design.
-              </p>
-            ) : null}
-            {duplicateEntryCount > 1 ? (
-              <p className="mt-3 text-sm text-red-800">
-                Multiple signature records were found ({duplicateEntryCount}). Remove your
-                signature to clear them, then sign once.
-              </p>
-            ) : null}
           </div>
 
           <div
@@ -195,21 +175,11 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
               width: "100%",
             }}
           >
-            {pageMissing ? (
-              <p className="px-8 text-center text-sm text-stone-500">No page image to display</p>
-            ) : (
-              <EntryPageContent entry={signedEntry} showSignedPageMetadata={false} />
-            )}
+            <EntryPageContent entry={signedEntry} showSignedPageMetadata={false} />
           </div>
 
           <div className="flex flex-col items-center gap-4 text-center">
-            <Link
-              className="inline-flex rounded-full bg-yearbook-ink px-5 py-3 text-sm font-semibold text-white"
-              href={`/write/${ownerProfile.username}?replace=1`}
-            >
-              Replace my page
-            </Link>
-            <RemoveYearbookEntryForm
+            <DeleteYearbookSignatureButton
               ownerUsername={ownerProfile.username}
               yearbookId={yearbook.id}
             />
@@ -231,15 +201,8 @@ export default async function WriteEntryPage({ params, searchParams }: WriteEntr
       ownerUsername={ownerProfile.username}
       recipientMeta={recipientMeta}
       recipientName={recipientName}
-      yearbookId={yearbook.id}
     >
       <ClearDraftOnEntryRemoved yearbookId={yearbook.id} />
-      {replaceExistingEntry ? (
-        <p className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          You are replacing your previous signature. Preview your page, then sign to save the new
-          version.
-        </p>
-      ) : null}
       <CanvasEntryEditor
         authorClass={signerProfile.graduation_class}
         authorName={signerProfile.display_name}
@@ -257,7 +220,6 @@ type WritePageShellProps = {
   ownerUsername: string;
   recipientMeta?: string;
   recipientName?: string;
-  yearbookId?: string;
 };
 
 function WritePageShell({
@@ -266,7 +228,6 @@ function WritePageShell({
   ownerUsername,
   recipientMeta,
   recipientName,
-  yearbookId,
 }: WritePageShellProps) {
   return (
     <main className="mx-auto min-h-screen max-w-6xl bg-yearbook-paper px-6 py-8">
@@ -289,11 +250,7 @@ function WritePageShell({
               <h2 className="mt-4 text-2xl font-bold">{recipientName}</h2>
               {recipientMeta ? <p className="text-sm text-stone-600">{recipientMeta}</p> : null}
               <p className="mt-3 text-stone-700">
-                Design your page on the canvas below. Your signed page is permanent after you submit.
-              </p>
-              <p className="mt-3 text-xs font-semibold text-amber-800">
-                Once signed, this entry cannot be edited. You can preview and return to edit before
-                signing.
+                Design your page on the canvas below, then sign when you are ready.
               </p>
             </>
           ) : (
@@ -302,15 +259,6 @@ function WritePageShell({
           <p className="mt-2 text-sm text-stone-500">
             Yearbook link: <span className="font-semibold text-yearbook-ink">@{ownerUsername}</span>
           </p>
-          {yearbookId ? (
-            <div className="mt-3">
-              <RemoveYearbookEntryForm
-                ownerUsername={ownerUsername}
-                variant="compact"
-                yearbookId={yearbookId}
-              />
-            </div>
-          ) : null}
         </div>
       ) : null}
       {children}

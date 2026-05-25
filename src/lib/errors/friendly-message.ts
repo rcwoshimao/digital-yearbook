@@ -87,13 +87,13 @@ function messageForDuplicate(text: string, context: FriendlyErrorContext): strin
     case "profile_username":
       return "That username is already taken. Try another one.";
     case "entry_upload":
-      return "A previous page image is still saved from an earlier attempt. Click Remove my signature, then sign again.";
+      return "Could not upload your page image. Delete your signature if you have one, then try again.";
     case "entry_submit":
       if (isEntryAuthorDuplicate(text)) {
-        return "You already have a saved signature for this yearbook. Tap Remove my signature, then sign again.";
+        return "You already signed this yearbook. Delete your signature, then sign again.";
       }
 
-      return "Could not save your entry because a conflicting record exists. Try Remove my signature, then sign again.";
+      return "Could not save your page. Delete your signature if you have one, then try again.";
     case "entry_delete":
       return "Could not remove your entry. Your database may need migration 0011 (authors can delete their own entries).";
     default:

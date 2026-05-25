@@ -7,7 +7,6 @@ import { friendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { isDevFeaturesEnabled } from "@/lib/auth/dev";
 import {
   authorEntryPageImagePath,
-  clearAuthorEntryPageImageStorage,
   deleteAuthorEntriesForYearbook,
   fetchAuthorEntriesForYearbook,
 } from "@/lib/yearbook/author-entry";
@@ -158,7 +157,78 @@ export async function submitCanvasEntry(formData: FormData) {
   const pageImageObjectPath = authorEntryPageImagePath(yearbookId, user.id);
   const pageImageBytes = Buffer.from(await pageImageFile.arrayBuffer());
 
-  await clearAuthorEntryPageImageStorage(supabase, yearbookId, user.id);
+  let existingRows: Awaited<ReturnType<typeof fetchAuthorEntriesForYearbook>> = [];
+
+  try {
+    existingRows = await fetchAuthorEntriesForYearbook(supabase, yearbookId, user.id);
+  } catch (fetchError: unknown) {
+    redirect(
+      writeErrorUrl(
+        ownerUsername,
+        friendlyErrorMessage(
+          fetchError instanceof Error ? fetchError.message : String(fetchError),
+          "entry_submit",
+        ),
+      ),
+    );
+  }
+
+  // Replace-in-place: upload first, then update the row (never delete storage before this).
+  if (existingRows.length === 1) {
+    const uploadError = await uploadEntryPageImage(
+      supabase,
+      pageImageObjectPath,
+      pageImageBytes,
+      pageImageFile.type,
+    );
+
+    if (uploadError) {
+      redirect(
+        writeErrorUrl(
+          ownerUsername,
+          friendlyErrorMessage(uploadError, "entry_upload"),
+          errorDebugDetail(uploadError),
+        ),
+      );
+    }
+
+    const { error: updateError } = await replaceExistingEntryPage(
+      supabase,
+      existingRows[0].id,
+      user.id,
+      pageImageObjectPath,
+      profile,
+    );
+
+    if (!updateError) {
+      revalidatePath("/write");
+      revalidatePath(`/write/${ownerUsername}`);
+      revalidatePath("/dashboard");
+      redirect("/write?signed=1");
+    }
+  }
+
+  // Full replace or new sign: remove old rows/storage first, then upload once, then insert.
+  if (existingRows.length > 0) {
+    try {
+      await deleteAuthorEntriesForYearbook(supabase, yearbookId, user.id);
+    } catch (deleteError: unknown) {
+      const detail =
+        deleteError instanceof Error ? deleteError.message : String(deleteError);
+
+      redirect(writeErrorUrl(ownerUsername, friendlyErrorMessage(detail, "entry_delete")));
+    }
+
+    const stillThere = await fetchAuthorEntriesForYearbook(supabase, yearbookId, user.id);
+    if (stillThere.length > 0) {
+      redirect(
+        writeErrorUrl(
+          ownerUsername,
+          "Could not replace your previous entry. Delete your signature and try again.",
+        ),
+      );
+    }
+  }
 
   const uploadError = await uploadEntryPageImage(
     supabase,
@@ -177,65 +247,7 @@ export async function submitCanvasEntry(formData: FormData) {
     );
   }
 
-  let existingRows: Awaited<ReturnType<typeof fetchAuthorEntriesForYearbook>> = [];
-
-  try {
-    existingRows = await fetchAuthorEntriesForYearbook(supabase, yearbookId, user.id);
-  } catch (fetchError: unknown) {
-    redirect(
-      writeErrorUrl(
-        ownerUsername,
-        friendlyErrorMessage(
-          fetchError instanceof Error ? fetchError.message : String(fetchError),
-          "entry_submit",
-        ),
-      ),
-    );
-  }
-
-  if (existingRows.length === 1) {
-    const { error: updateError } = await replaceExistingEntryPage(
-      supabase,
-      existingRows[0].id,
-      user.id,
-      pageImageObjectPath,
-      profile,
-    );
-
-    if (!updateError) {
-      revalidatePath("/write");
-      revalidatePath(`/write/${ownerUsername}`);
-      revalidatePath("/dashboard");
-      redirect("/write?signed=1");
-    }
-  }
-
-  if (existingRows.length > 0) {
-    try {
-      await deleteAuthorEntriesForYearbook(supabase, yearbookId, user.id);
-    } catch (deleteError: unknown) {
-      const detail =
-        deleteError instanceof Error ? deleteError.message : String(deleteError);
-
-      redirect(writeErrorUrl(ownerUsername, friendlyErrorMessage(detail, "entry_delete")));
-    }
-
-    const stillThere = await fetchAuthorEntriesForYearbook(supabase, yearbookId, user.id);
-    if (stillThere.length > 0) {
-      redirect(
-        writeErrorUrl(
-          ownerUsername,
-          "Could not replace your previous entry. Run Supabase migrations 0011 and 0012, then use Remove my signature.",
-        ),
-      );
-    }
-  }
-
   const serviceClient = createServiceRoleClient();
-  if (serviceClient) {
-    await deleteAuthorEntriesForYearbook(serviceClient, yearbookId, user.id);
-  }
-
   const entryId = randomUUID();
   const entryRow = {
     id: entryId,
@@ -256,7 +268,7 @@ export async function submitCanvasEntry(formData: FormData) {
   }
 
   if (insertError) {
-    await supabase.storage.from("entry-pdfs").remove([pageImageObjectPath]);
+    await entryMutationClient(supabase).storage.from("entry-pdfs").remove([pageImageObjectPath]);
 
     if (isPostgresDuplicate(insertError) && serviceClient) {
       const { data: yearbookEntries } = await serviceClient

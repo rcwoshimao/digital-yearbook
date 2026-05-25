@@ -30,11 +30,11 @@ const SIGNED_SUCCESS_MESSAGE = "You've signed the yearbook!";
 
 const LEGACY_ENTRY_ERROR_MESSAGES: Record<string, string> = {
   "You've already signed this yearbook.":
-    "You already have a saved signature for this yearbook. Use Remove my signature (below the canvas), then sign again.",
+    "You already signed this yearbook. Delete your signature on that page, then sign again.",
   "That record already exists.":
-    "A previous page image is still saved from an earlier attempt. Use Remove my signature (below the canvas), then sign again.",
+    "Could not save your page. Delete your signature if you have one, then try again.",
   "Could not save your entry because a conflicting record exists. Try Remove my signature, or delete the row in Supabase → entries for this yearbook.":
-    "A previous page image or database row is blocking save. Use Remove my signature (below the canvas), then sign again.",
+    "Could not save your page. Delete your signature if you have one, then try again.",
 };
 
 function sanitizeErrorParam(raw: string, context: FriendlyErrorContext): string {
@@ -106,7 +106,7 @@ export function parseNotificationFromSearchParams(
 
   if (searchParams.has("entry_removed")) {
     return {
-      message: "Your signature was removed. You can design and sign a new page.",
+      message: "Signature deleted. You can design and sign a new page.",
       tone: "success",
       urlParamsToClear: ["entry_removed"],
     };

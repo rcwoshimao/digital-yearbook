@@ -1,6 +1,10 @@
 /**
- * One-shot: remove orphan entry-pdfs objects that have no matching entries row.
- * Usage: node scripts/clear-orphan-entry-storage.mjs
+ * DANGEROUS — only run with --dry-run first.
+ * Lists or removes entry-pdfs objects not referenced by entries.page_image_url / pdf_url.
+ *
+ * Usage:
+ *   node scripts/clear-orphan-entry-storage.mjs --dry-run
+ *   node scripts/clear-orphan-entry-storage.mjs --confirm
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
@@ -28,6 +32,13 @@ function loadEnvFile() {
   return values;
 }
 
+const args = new Set(process.argv.slice(2));
+const dryRun = args.has("--dry-run") || !args.has("--confirm");
+
+if (dryRun) {
+  console.log("DRY RUN — pass --confirm to delete files.\n");
+}
+
 const env = loadEnvFile();
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -52,13 +63,23 @@ for (const yb of yearbooks ?? []) {
 
   if (orphans.length === 0) continue;
 
+  console.log(`Yearbook ${yb.id} orphans:`, orphans);
+
+  if (dryRun) {
+    removed += orphans.length;
+    continue;
+  }
+
   const { error } = await admin.storage.from("entry-pdfs").remove(orphans);
   if (error) {
     console.warn(`Could not remove some files in ${yb.id}:`, error.message);
   } else {
     removed += orphans.length;
-    console.log("Removed orphans:", orphans);
   }
 }
 
-console.log(`Done. Removed ${removed} orphan object(s).`);
+console.log(
+  dryRun
+    ? `Dry run: ${removed} object(s) would be removed.`
+    : `Done. Removed ${removed} orphan object(s).`,
+);

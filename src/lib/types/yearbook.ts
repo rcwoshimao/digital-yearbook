@@ -28,6 +28,8 @@ export type YearbookEntry = {
   imageUrls: string[];
   pdfUrl: string | null;
   pageImageUrl: string | null;
+  /** DB references a page image path but the storage object is missing. */
+  pageImageMissing?: boolean;
   styleConfig: YearbookPageStyle;
   createdAt: Date;
   isVisibleToOwner: boolean;

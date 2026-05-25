@@ -28,6 +28,9 @@ export type SignedEntryAssets = {
 };
 
 export function mapEntryRow(row: EntryRow, signedAssets?: Partial<SignedEntryAssets>): YearbookEntry {
+  const pageImageUrl = signedAssets?.pageImageUrl ?? null;
+  const pageImageMissing = Boolean(row.page_image_url && !pageImageUrl);
+
   return {
     id: row.id,
     yearbookId: row.yearbook_id,
@@ -38,7 +41,8 @@ export function mapEntryRow(row: EntryRow, signedAssets?: Partial<SignedEntryAss
     contentText: row.content_text ?? "",
     imageUrls: signedAssets?.imageUrls ?? row.image_urls ?? [],
     pdfUrl: signedAssets?.pdfUrl ?? row.pdf_url,
-    pageImageUrl: signedAssets?.pageImageUrl ?? row.page_image_url,
+    pageImageUrl,
+    pageImageMissing,
     styleConfig: normalizeYearbookPageStyle(row.style_config),
     createdAt: new Date(row.created_at),
     isVisibleToOwner: row.is_visible_to_owner ?? true,

@@ -270,7 +270,7 @@ function EmptyPage({ shareUrl }: { shareUrl: string }) {
 }
 
 function EntryPage({ entry }: { entry: YearbookEntry }) {
-  if (entry.pageImageUrl) {
+  if (entry.pageImageUrl || entry.pageImageMissing) {
     return (
       <div className="h-full w-full overflow-hidden">
         <EntryPageContent entry={entry} />
