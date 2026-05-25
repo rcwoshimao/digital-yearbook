@@ -1,4 +1,5 @@
 import { isDevFeaturesEnabled } from "@/lib/auth/dev";
+import { messageForInvalidApiKeyError } from "@/lib/supabase/keys";
 
 export type FriendlyErrorContext =
   | "auth"
@@ -235,6 +236,10 @@ export function friendlyErrorMessage(
     if (authMessage) {
       return authMessage;
     }
+  }
+
+  if (/invalid api key/i.test(text)) {
+    return messageForInvalidApiKeyError();
   }
 
   if (/jws|jwt|protected header|bad_jwt|invalid token|refresh token|session/i.test(text)) {

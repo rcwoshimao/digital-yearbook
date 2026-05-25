@@ -73,6 +73,9 @@ Set under **Settings → Build → Build variables and secrets** (so they exist 
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes |
 | `NEXT_PUBLIC_APP_URL` | Yes — `https://digital-yearbook.<account>.workers.dev` (not localhost) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes — **service_role** JWT (`eyJ…`), not the anon key |
+
+`npm run cf:build` runs `scripts/verify-build-env.mjs` first. If those `NEXT_PUBLIC_*` vars are missing at build time, the log will say **“Build aborted — missing required environment variables”** instead of a vague `Command failed: npm run build`.
 
 Optional preview-only:
 

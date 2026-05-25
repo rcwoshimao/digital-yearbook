@@ -10,7 +10,11 @@ import {
   deleteAuthorEntriesForYearbook,
   fetchAuthorEntriesForYearbook,
 } from "@/lib/yearbook/author-entry";
-import { createServiceRoleClient, entryMutationClient } from "@/lib/supabase/service-role";
+import {
+  createServiceRoleClient,
+  entryMutationClient,
+  getServiceRoleKeyProblem,
+} from "@/lib/supabase/service-role";
 import { isNextNavigationError } from "@/lib/next/is-redirect-error";
 import { requireUser, requireUserMessage } from "@/lib/supabase/require-user";
 import { createClient } from "@/lib/supabase/server";
@@ -263,8 +267,9 @@ async function runSubmitCanvasEntry(formData: FormData): Promise<string | null> 
       : message;
   }
 
-  if (!createServiceRoleClient()) {
-    return "Signing is not configured on the server (missing SUPABASE_SERVICE_ROLE_KEY). Add it in Cloudflare and redeploy.";
+  const serviceRoleProblem = getServiceRoleKeyProblem();
+  if (serviceRoleProblem) {
+    return serviceRoleProblem;
   }
 
   const serviceClient = createServiceRoleClient();
