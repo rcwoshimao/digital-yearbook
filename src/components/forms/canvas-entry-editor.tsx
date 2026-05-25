@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Canvas, FabricImage, IText, Textbox, type FabricObject } from "fabric";
 import { submitCanvasEntry } from "@/app/yearbook/[yearbookId]/write/actions";
 import { createClient } from "@/lib/supabase/client";
@@ -79,6 +80,7 @@ export function CanvasEntryEditor({
   ownerUsername,
   yearbookId,
 }: CanvasEntryEditorProps) {
+  const router = useRouter();
   const { notifyError, notifySuccess } = useNotification();
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const fabricRef = useRef<Canvas | null>(null);
@@ -587,14 +589,26 @@ export function CanvasEntryEditor({
       formData.set("yearbookId", yearbookId);
       formData.set("ownerUsername", ownerUsername);
       formData.set("pageImage", new File([pageImageBlob], "entry.jpg", { type: "image/jpeg" }));
-      await submitCanvasEntry(formData);
+      const result = await submitCanvasEntry(formData);
+
+      if (!result.ok) {
+        notifyError(result.message);
+        const params = new URLSearchParams({ entry_error: result.message });
+        router.replace(`/write/${ownerUsername}?${params.toString()}`);
+        setIsSubmitting(false);
+        return;
+      }
     } catch (error) {
       if (isNextNavigationError(error)) {
         await clearDraft(yearbookId);
         throw error;
       }
 
-      notifyError("Could not submit your entry. Please try again.");
+      const fallback =
+        error instanceof Error ? error.message : "Could not submit your entry. Please try again.";
+      notifyError(fallback);
+      const params = new URLSearchParams({ entry_error: fallback });
+      router.replace(`/write/${ownerUsername}?${params.toString()}`);
       setIsSubmitting(false);
     }
   }

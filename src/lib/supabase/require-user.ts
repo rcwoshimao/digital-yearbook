@@ -30,16 +30,46 @@ export async function requireUser(
   supabase: SupabaseClient,
   options: RequireUserOptions = {},
 ): Promise<User> {
+  const result = await resolveUser(supabase);
+
+  if (!result.ok) {
+    loginRedirect(options.writeOwnerUsername);
+  }
+
+  return result.user;
+}
+
+/** Returns a friendly error string instead of redirecting (for actions that return JSON errors). */
+export async function requireUserMessage(
+  supabase: SupabaseClient,
+): Promise<{ ok: true; user: User } | { ok: false; message: string }> {
+  const result = await resolveUser(supabase);
+
+  if (!result.ok) {
+    return { ok: false, message: result.message };
+  }
+
+  return { ok: true, user: result.user };
+}
+
+async function resolveUser(
+  supabase: SupabaseClient,
+): Promise<{ ok: true; user: User } | { ok: false; message: string }> {
   const { data, error } = await supabase.auth.getUser();
 
   if (error?.message && isAuthSessionErrorMessage(error.message)) {
-    loginRedirect(options.writeOwnerUsername);
+    return {
+      ok: false,
+      message: friendlyErrorMessage(error.message, "auth"),
+    };
   }
 
-  const user = data.user;
-  if (!user) {
-    loginRedirect(options.writeOwnerUsername);
+  if (!data.user) {
+    return {
+      ok: false,
+      message: friendlyErrorMessage("session expired", "auth"),
+    };
   }
 
-  return user;
+  return { ok: true, user: data.user };
 }

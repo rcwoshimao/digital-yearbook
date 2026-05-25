@@ -11,9 +11,13 @@ import {
   fetchAuthorEntriesForYearbook,
 } from "@/lib/yearbook/author-entry";
 import { createServiceRoleClient, entryMutationClient } from "@/lib/supabase/service-role";
-import { requireUser } from "@/lib/supabase/require-user";
+import { isNextNavigationError } from "@/lib/next/is-redirect-error";
+import { requireUser, requireUserMessage } from "@/lib/supabase/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeUsername } from "@/lib/username";
+import type { SubmitCanvasEntryResult } from "@/app/yearbook/[yearbookId]/write/submit-result";
+
+export type { SubmitCanvasEntryResult } from "@/app/yearbook/[yearbookId]/write/submit-result";
 
 const MAX_PAGE_IMAGE_SIZE = 10 * 1024 * 1024;
 
@@ -116,32 +120,57 @@ async function insertCanvasEntryRow(
   });
 }
 
-export async function submitCanvasEntry(formData: FormData) {
+async function readPageImageUpload(
+  formData: FormData,
+): Promise<{ bytes: Buffer; contentType: string } | { message: string }> {
+  const value = formData.get("pageImage");
+
+  if (!(value instanceof Blob) || value.size === 0) {
+    return { message: "A page image is required to sign this yearbook." };
+  }
+
+  const contentType =
+    (value instanceof File ? value.type : (value as Blob).type) || "image/jpeg";
+
+  if (!contentType.startsWith("image/")) {
+    return { message: "Only image uploads are allowed." };
+  }
+
+  if (value.size > MAX_PAGE_IMAGE_SIZE) {
+    return { message: "The page image must be 10MB or smaller." };
+  }
+
+  return {
+    bytes: Buffer.from(await value.arrayBuffer()),
+    contentType,
+  };
+}
+
+/** Returns an error message, or `null` when the entry was saved successfully. */
+async function runSubmitCanvasEntry(formData: FormData): Promise<string | null> {
   const yearbookId = String(formData.get("yearbookId") ?? "");
   const ownerUsername = normalizeUsername(String(formData.get("ownerUsername") ?? ""));
-  const pageImageFile = formData.get("pageImage");
 
   if (!yearbookId || !ownerUsername) {
-    redirect("/write");
+    return "Missing yearbook information. Go back to Sign Yearbooks and try again.";
   }
 
-  if (!(pageImageFile instanceof File) || pageImageFile.size === 0) {
-    redirect(writeErrorUrl(ownerUsername, "A page image is required to sign this yearbook."));
-  }
-
-  if (!pageImageFile.type.startsWith("image/")) {
-    redirect(writeErrorUrl(ownerUsername, "Only image uploads are allowed."));
-  }
-
-  if (pageImageFile.size > MAX_PAGE_IMAGE_SIZE) {
-    redirect(writeErrorUrl(ownerUsername, "The page image must be 10MB or smaller."));
+  const pageImage = await readPageImageUpload(formData);
+  if ("message" in pageImage) {
+    return pageImage.message;
   }
 
   const supabase = await createClient();
-  const user = await requireUser(supabase, { writeOwnerUsername: ownerUsername });
+  const auth = await requireUserMessage(supabase);
+
+  if (!auth.ok) {
+    return auth.message;
+  }
+
+  const user = auth.user;
   const db = entryMutationClient(supabase);
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile, error: profileError } = await db
     .from("profiles")
     .select("display_name, university, graduation_class")
     .eq("id", user.id)
@@ -151,26 +180,26 @@ export async function submitCanvasEntry(formData: FormData) {
       graduation_class: string | null;
     }>();
 
-  if (profileError || !profile) {
-    redirect(writeErrorUrl(ownerUsername, "Complete your profile before writing an entry."));
+  if (profileError) {
+    return friendlyErrorMessage(profileError, "entry_submit");
+  }
+
+  if (!profile) {
+    return "Complete your profile before writing an entry.";
   }
 
   const pageImageObjectPath = authorEntryPageImagePath(yearbookId, user.id);
-  const pageImageBytes = Buffer.from(await pageImageFile.arrayBuffer());
+  const pageImageBytes = pageImage.bytes;
+  const pageImageContentType = pageImage.contentType;
 
   let existingRows: Awaited<ReturnType<typeof fetchAuthorEntriesForYearbook>> = [];
 
   try {
     existingRows = await fetchAuthorEntriesForYearbook(db, yearbookId, user.id);
   } catch (fetchError: unknown) {
-    redirect(
-      writeErrorUrl(
-        ownerUsername,
-        friendlyErrorMessage(
-          fetchError instanceof Error ? fetchError.message : String(fetchError),
-          "entry_submit",
-        ),
-      ),
+    return friendlyErrorMessage(
+      fetchError instanceof Error ? fetchError.message : String(fetchError),
+      "entry_submit",
     );
   }
 
@@ -180,17 +209,14 @@ export async function submitCanvasEntry(formData: FormData) {
       supabase,
       pageImageObjectPath,
       pageImageBytes,
-      pageImageFile.type,
+      pageImageContentType,
     );
 
     if (uploadError) {
-      redirect(
-        writeErrorUrl(
-          ownerUsername,
-          friendlyErrorMessage(uploadError, "entry_upload"),
-          errorDebugDetail(uploadError),
-        ),
-      );
+      const message = friendlyErrorMessage(uploadError, "entry_upload");
+      return isDevFeaturesEnabled
+        ? `${message} (${errorDebugDetail(uploadError) ?? "upload"})`
+        : message;
     }
 
     const { error: updateError } = await replaceExistingEntryPage(
@@ -202,10 +228,7 @@ export async function submitCanvasEntry(formData: FormData) {
     );
 
     if (!updateError) {
-      revalidatePath("/write");
-      revalidatePath(`/write/${ownerUsername}`);
-      revalidatePath("/dashboard");
-      redirect("/write?signed=1");
+      return null;
     }
   }
 
@@ -217,17 +240,12 @@ export async function submitCanvasEntry(formData: FormData) {
       const detail =
         deleteError instanceof Error ? deleteError.message : String(deleteError);
 
-      redirect(writeErrorUrl(ownerUsername, friendlyErrorMessage(detail, "entry_delete")));
+      return friendlyErrorMessage(detail, "entry_delete");
     }
 
     const stillThere = await fetchAuthorEntriesForYearbook(db, yearbookId, user.id);
     if (stillThere.length > 0) {
-      redirect(
-        writeErrorUrl(
-          ownerUsername,
-          "Could not replace your previous entry. Delete your signature and try again.",
-        ),
-      );
+      return "Could not replace your previous entry. Delete your signature and try again.";
     }
   }
 
@@ -235,17 +253,18 @@ export async function submitCanvasEntry(formData: FormData) {
     supabase,
     pageImageObjectPath,
     pageImageBytes,
-    pageImageFile.type,
+    pageImageContentType,
   );
 
   if (uploadError) {
-    redirect(
-      writeErrorUrl(
-        ownerUsername,
-        friendlyErrorMessage(uploadError, "entry_upload"),
-        errorDebugDetail(uploadError),
-      ),
-    );
+    const message = friendlyErrorMessage(uploadError, "entry_upload");
+    return isDevFeaturesEnabled
+      ? `${message} (${errorDebugDetail(uploadError) ?? "upload"})`
+      : message;
+  }
+
+  if (!createServiceRoleClient()) {
+    return "Signing is not configured on the server (missing SUPABASE_SERVICE_ROLE_KEY). Add it in Cloudflare and redeploy.";
   }
 
   const serviceClient = createServiceRoleClient();
@@ -285,28 +304,47 @@ export async function submitCanvasEntry(formData: FormData) {
       );
 
       if (hasOtherAuthor) {
-        redirect(
-          writeErrorUrl(
-            ownerUsername,
-            "This yearbook already has a signature row tied to another account. Sign in with that account, or delete the row in Supabase → entries.",
-          ),
-        );
+        return "This yearbook already has a signature row tied to another account. Sign in with that account, or delete the row in Supabase → entries.";
       }
     }
 
-    redirect(
-      writeErrorUrl(
-        ownerUsername,
-        friendlyErrorMessage(insertError, "entry_submit"),
-        errorDebugDetail(insertError),
-      ),
-    );
+    const message = friendlyErrorMessage(insertError, "entry_submit");
+    return isDevFeaturesEnabled
+      ? `${message} (${errorDebugDetail(insertError) ?? "insert"})`
+      : message;
   }
 
-  revalidatePath("/write");
-  revalidatePath(`/write/${ownerUsername}`);
-  revalidatePath("/dashboard");
-  redirect("/write?signed=1");
+  return null;
+}
+
+export async function submitCanvasEntry(
+  formData: FormData,
+): Promise<SubmitCanvasEntryResult> {
+  try {
+    const errorMessage = await runSubmitCanvasEntry(formData);
+
+    if (errorMessage) {
+      return { ok: false, message: errorMessage };
+    }
+
+    const ownerUsername = normalizeUsername(String(formData.get("ownerUsername") ?? ""));
+
+    revalidatePath("/write");
+    revalidatePath(`/write/${ownerUsername}`);
+    revalidatePath("/dashboard");
+    redirect("/write?signed=1");
+  } catch (error) {
+    if (isNextNavigationError(error)) {
+      throw error;
+    }
+
+    const raw = error instanceof Error ? error.message : String(error);
+
+    return {
+      ok: false,
+      message: friendlyErrorMessage(raw, "entry_submit"),
+    };
+  }
 }
 
 /** Remove all entries the current user wrote to this yearbook (and related storage files). */
