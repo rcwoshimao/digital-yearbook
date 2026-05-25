@@ -60,6 +60,17 @@ create policy "Authors can update own entry pdfs"
     and public.can_submit_entry_to_yearbook(((storage.foldername(name))[1])::uuid)
   );
 
+drop policy if exists "Authors can delete entries they wrote" on public.entries;
+create policy "Authors can delete entries they wrote"
+  on public.entries for delete to authenticated
+  using (auth.uid() = author_id);
+
+drop policy if exists "Authors can update own entry page assets" on public.entries;
+create policy "Authors can update own entry page assets"
+  on public.entries for update to authenticated
+  using (auth.uid() = author_id)
+  with check (auth.uid() = author_id);
+
 drop policy if exists "Authors can delete own entry pdfs" on storage.objects;
 create policy "Authors can delete own entry pdfs"
   on storage.objects for delete to authenticated

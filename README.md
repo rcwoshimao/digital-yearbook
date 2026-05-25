@@ -17,7 +17,7 @@ A full-stack graduation yearbook where graduates collect signed pages from frien
 - Interactive flipbook viewer with cover, signed pages, and back cover
 - Search entries by author name
 - Share yearbook via link (`/write/[username]`) or invite specific users by username
-- Share modes: **Anyone with link** or **Invite only**
+- Share modes: **Invite only** (default) or **Anyone with link**
 - Export the full yearbook as a downloadable PDF
 
 ### Sign a yearbook (`/write`)

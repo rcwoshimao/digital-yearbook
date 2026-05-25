@@ -49,18 +49,28 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<ActiveNotification | null>(null);
   const idRef = useRef(0);
   const lastUrlSignatureRef = useRef<string | null>(null);
+  const pendingUrlStripRef = useRef(false);
 
   const dismiss = useCallback(() => {
     setActive((current) => {
       if (current?.urlParamsToClear?.length) {
-        const href = stripNotificationParams(pathname, searchParams);
-        router.replace(href, { scroll: false });
-        lastUrlSignatureRef.current = null;
+        pendingUrlStripRef.current = true;
       }
 
       return null;
     });
-  }, [pathname, router, searchParams]);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingUrlStripRef.current) {
+      return;
+    }
+
+    pendingUrlStripRef.current = false;
+    const href = stripNotificationParams(pathname, searchParams);
+    router.replace(href, { scroll: false });
+    lastUrlSignatureRef.current = null;
+  }, [active, pathname, router, searchParams]);
 
   const notify = useCallback((payload: NotificationPayload) => {
     idRef.current += 1;

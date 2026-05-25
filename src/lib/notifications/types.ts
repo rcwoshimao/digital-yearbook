@@ -21,13 +21,28 @@ export const NOTIFICATION_URL_PARAMS = [
   "profile_error",
   "profile_message",
   "entry_error",
+  "entry_removed",
 ] as const;
 
 export type NotificationUrlParam = (typeof NOTIFICATION_URL_PARAMS)[number];
 
 const SIGNED_SUCCESS_MESSAGE = "You've signed the yearbook!";
 
+const LEGACY_ENTRY_ERROR_MESSAGES: Record<string, string> = {
+  "You've already signed this yearbook.":
+    "You already have a saved signature for this yearbook. Use Remove my signature (below the canvas), then sign again.",
+  "That record already exists.":
+    "A previous page image is still saved from an earlier attempt. Use Remove my signature (below the canvas), then sign again.",
+  "Could not save your entry because a conflicting record exists. Try Remove my signature, or delete the row in Supabase → entries for this yearbook.":
+    "A previous page image or database row is blocking save. Use Remove my signature (below the canvas), then sign again.",
+};
+
 function sanitizeErrorParam(raw: string, context: FriendlyErrorContext): string {
+  const legacy = LEGACY_ENTRY_ERROR_MESSAGES[raw.trim()];
+  if (legacy) {
+    return legacy;
+  }
+
   return friendlyErrorMessage(raw, context);
 }
 
@@ -77,10 +92,23 @@ export function parseNotificationFromSearchParams(
 
   const entryError = searchParams.get("entry_error");
   if (entryError) {
+    const decoded = decodeURIComponent(entryError);
+    const context = /migration 0011|could not remove|delete incomplete/i.test(decoded)
+      ? "entry_delete"
+      : "entry_submit";
+
     return {
-      message: sanitizeErrorParam(entryError, "entry_submit"),
+      message: sanitizeErrorParam(decoded, context),
       tone: "error",
       urlParamsToClear: ["entry_error"],
+    };
+  }
+
+  if (searchParams.has("entry_removed")) {
+    return {
+      message: "Your signature was removed. You can design and sign a new page.",
+      tone: "success",
+      urlParamsToClear: ["entry_removed"],
     };
   }
 

@@ -2,6 +2,7 @@ import { isDevFeaturesEnabled } from "@/lib/auth/dev";
 
 export type FriendlyErrorContext =
   | "auth"
+  | "entry_delete"
   | "entry_submit"
   | "entry_upload"
   | "generic"
@@ -33,6 +34,10 @@ function normalizeErrorText(error: ErrorLike | string | null | undefined): strin
   return [error.message, error.details, error.hint].filter(Boolean).join(" ").trim();
 }
 
+function isStorageConflict(text: string): boolean {
+  return /storage|object not found|bucket|upload/i.test(text);
+}
+
 function isDuplicateViolation(error: ErrorLike | string): string {
   const text = typeof error === "string" ? error : normalizeErrorText(error);
   const code = typeof error === "string" ? undefined : error.code;
@@ -41,11 +46,22 @@ function isDuplicateViolation(error: ErrorLike | string): string {
     return text;
   }
 
-  if (/duplicate key|unique constraint|already exists/i.test(text)) {
+  if (/duplicate key|unique constraint/i.test(text)) {
+    return text;
+  }
+
+  // Storage "already exists" is not a Postgres duplicate on entries.
+  if (/already exists/i.test(text) && !isStorageConflict(text)) {
     return text;
   }
 
   return "";
+}
+
+function isEntryAuthorDuplicate(text: string): boolean {
+  return /one_entry_per_author|entries.*yearbook_id.*author_id|yearbook_id.*author_id/i.test(
+    text,
+  );
 }
 
 function isRlsViolation(text: string): boolean {
@@ -65,17 +81,21 @@ function messageForDuplicate(text: string, context: FriendlyErrorContext): strin
     return "An account with that email already exists.";
   }
 
-  if (/entries/i.test(text)) {
-    return "You've already signed this yearbook.";
-  }
-
   switch (context) {
     case "invite":
       return "That person is already invited to your yearbook.";
     case "profile_username":
       return "That username is already taken. Try another one.";
+    case "entry_upload":
+      return "A previous page image is still saved from an earlier attempt. Click Remove my signature, then sign again.";
     case "entry_submit":
-      return "You've already signed this yearbook.";
+      if (isEntryAuthorDuplicate(text)) {
+        return "You already have a saved signature for this yearbook. Tap Remove my signature, then sign again.";
+      }
+
+      return "Could not save your entry because a conflicting record exists. Try Remove my signature, then sign again.";
+    case "entry_delete":
+      return "Could not remove your entry. Your database may need migration 0011 (authors can delete their own entries).";
     default:
       return "That record already exists.";
   }
@@ -87,6 +107,8 @@ function messageForRls(context: FriendlyErrorContext): string {
     case "revoke_invite":
     case "share_mode":
       return "You don't have permission to change sharing for this yearbook.";
+    case "entry_delete":
+      return "You don't have permission to remove this entry.";
     case "entry_submit":
     case "entry_upload":
       return "You don't have permission to submit to this yearbook. Make sure you're signed in and invited.";
@@ -157,6 +179,8 @@ function fallbackForContext(context: FriendlyErrorContext): string {
       return "Could not update your name. Please try again.";
     case "profile_school":
       return "Could not update your school details. Please try again.";
+    case "entry_delete":
+      return "Could not remove your entry. Please try again.";
     case "entry_submit":
       return "Could not save your entry. Please try again.";
     case "entry_upload":
@@ -183,10 +207,21 @@ export function friendlyErrorMessage(
 
   const duplicateText = isDuplicateViolation(typeof error === "string" ? text : (error ?? text));
   if (duplicateText) {
-    return messageForDuplicate(duplicateText, context) ?? fallbackForContext(context);
+    const duplicateMessage = messageForDuplicate(duplicateText, context);
+    if (duplicateMessage) {
+      return duplicateMessage;
+    }
+
+    if (context === "entry_submit" || context === "entry_delete") {
+      return fallbackForContext(context);
+    }
   }
 
   if (isRlsViolation(text)) {
+    if (context === "entry_delete") {
+      return "Could not remove your entry. Run Supabase migration 0011 so authors can delete their own entries.";
+    }
+
     return messageForRls(context);
   }
 

@@ -168,7 +168,7 @@ async function upsertUser(admin, user) {
   const { error: yearbookError } = await admin.from("yearbooks").upsert({
     id: user.yearbookId,
     owner_id: user.id,
-    share_mode: "link",
+    share_mode: "invite_only",
   });
 
   if (yearbookError) {

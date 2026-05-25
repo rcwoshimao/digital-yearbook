@@ -379,8 +379,8 @@ begin
 
   insert into public.yearbooks (id, owner_id, share_mode, created_at)
   values
-    (yearbook1_id, user1_id, 'link', now()),
-    (yearbook2_id, user2_id, 'link', now());
+    (yearbook1_id, user1_id, 'invite_only', now()),
+    (yearbook2_id, user2_id, 'invite_only', now());
 
   raise notice 'SQL reset complete. REQUIRED next step: npm run seed:dev (clears storage PDFs + fixes passwords)';
 end;

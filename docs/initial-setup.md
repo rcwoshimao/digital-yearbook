@@ -42,7 +42,7 @@ Every user automatically gets one yearbook upon signup.
 create table yearbooks (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid references profiles(id) on delete cascade not null,
-  share_mode text check (share_mode in ('link', 'invite_only')) default 'link',
+  share_mode text check (share_mode in ('link', 'invite_only')) default 'invite_only',
   created_at timestamptz default now()
 );
 ```
