@@ -25,17 +25,14 @@ function scrollToFeatures(event: React.MouseEvent<HTMLAnchorElement>) {
 
 export function LoginHero({ isConfigured }: LoginHeroProps) {
   return (
-    <section className="relative min-h-screen px-6 py-10 sm:py-12">
-      <div className="yearbook-page-bg absolute inset-0 -z-10" />
-      <div className="absolute left-10 top-12 -z-10 h-24 w-24 rounded-full bg-white/40 blur-xl" />
-      <div className="absolute bottom-16 right-16 -z-10 h-32 w-32 rounded-full bg-yearbook-accent/20 blur-2xl" />
-
+    <section className="relative min-h-screen px-6 py-10 sm:py-12" id="get-started">
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl flex-col justify-center gap-10 lg:flex-row lg:items-center lg:gap-12">
         <div className="w-full shrink-0 lg:max-w-md lg:flex-1">
           <AppBrand
-            className="inline-flex items-center gap-4 text-3xl font-black tracking-tight sm:text-4xl"
+            className="inline-flex items-center gap-5 text-3xl font-black tracking-tight sm:text-4xl"
             href="/"
-            iconSize={56}
+            iconSize={100}
+            iconSrc="/assets/icon_big.png"
           />
 
           <h1 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">

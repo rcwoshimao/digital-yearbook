@@ -1,48 +1,86 @@
 "use client";
 
+import Image from "next/image";
 import { SampleFlipbook } from "@/components/login/sample-flipbook";
 
-type FeatureCard = {
+const DEMO_WIDTH = 1920;
+const DEMO_HEIGHT = 1080;
+
+type Feature = {
   title: string;
   description: string;
-  imagePath: string;
-  imageHint: string;
+  imageSrc: string;
+  imageAlt: string;
 };
 
-const FEATURES: FeatureCard[] = [
+const FEATURES: Feature[] = [
   {
-    title: "Desktop canvas signing",
+    title: "Share modes you control",
     description:
-      "Friends add text, photos, stickers, and freehand drawing on a page-sized canvas that matches the book.",
-    imagePath: "/assets/login-features/canvas-editor.png",
-    imageHint: "Write page with the Fabric.js editor and tool rail visible",
+      "Toggle between invite-only and anyone-with-link sharing. Tighten access when you want only close friends, or open the book when you want signing to feel effortless.",
+    imageSrc: "/assets/demos/sharemodes.gif",
+    imageAlt: "Switching between two yearbook share modes",
   },
   {
-    title: "Share & invite friends",
+    title: "Freewrite on a signing canvas",
     description:
-      "Send a personal link or invite by username. Choose invite-only or anyone-with-link sharing.",
-    imagePath: "/assets/login-features/share.png",
-    imageHint: "Share modal or invite flow on the dashboard",
+      "Open a page-sized canvas and write by hand—like signing a tablet in the hallway. Personal strokes and notes feel closer to a real yearbook than typed text alone.",
+    imageSrc: "/assets/demos/freewrite.gif",
+    imageAlt: "Freehand drawing and writing on a yearbook page",
+  },
+  {
+    title: "Backgrounds that match your style",
+    description:
+      "Set the mood with custom background images and colors on each page. Graduation palettes, photos, or clean tones—your book looks like yours, not a template.",
+    imageSrc: "/assets/demos/background.gif",
+    imageAlt: "Changing page background image and color",
+  },
+  {
+    title: "Text, photos, and stickers",
+    description:
+      "Layer messages, images, and stickers anywhere on the page. Mix typography and visuals so every signature carries the inside jokes and memories you want to keep.",
+    imageSrc: "/assets/demos/text_image_sticker.gif",
+    imageAlt: "Adding text, photos, and stickers to a yearbook page",
   },
 ];
 
-function FeatureImagePlaceholder({ feature }: { feature: FeatureCard }) {
+function scrollToGetStarted(event: React.MouseEvent<HTMLButtonElement>) {
+  event.preventDefault();
+  const target = document.getElementById("get-started");
+  if (!target) {
+    return;
+  }
+
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  target.scrollIntoView({
+    behavior: prefersReducedMotion ? "auto" : "smooth",
+    block: "start",
+  });
+}
+
+function FeatureTile({ feature }: { feature: Feature }) {
   return (
-    <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-yearbook-accent/35 bg-white/60 p-5 text-center">
-      <span className="rounded-full bg-yearbook-accent/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-yearbook-accent">
-        Screenshot placeholder
-      </span>
-      <code className="max-w-full break-all rounded-lg bg-stone-100 px-2 py-1.5 text-[11px] text-stone-800">
-        public{feature.imagePath}
-      </code>
-      <p className="text-xs leading-relaxed text-stone-600">{feature.imageHint}</p>
-    </div>
+    <article className="flex flex-col gap-4">
+      <Image
+        alt={feature.imageAlt}
+        className="h-auto w-full"
+        height={DEMO_HEIGHT}
+        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 576px"
+        src={feature.imageSrc}
+        unoptimized
+        width={DEMO_WIDTH}
+      />
+      <div>
+        <h3 className="text-lg font-bold tracking-tight text-yearbook-ink">{feature.title}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-stone-600">{feature.description}</p>
+      </div>
+    </article>
   );
 }
 
 export function LoginFeatures() {
   return (
-    <section className="border-t border-yearbook-ink/10 py-16">
+    <section className="border-t border-yearbook-ink/10 bg-white/75 py-16 backdrop-blur-sm">
       <div className="mx-auto max-w-5xl px-6">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
@@ -52,34 +90,60 @@ export function LoginFeatures() {
             Collect signatures, flip through pages, and share with the people who matter.
           </p>
         </div>
-      </div>
-
-      <div className="mt-12 w-full">
-        <SampleFlipbook />
-      </div>
-
-      <div className="mx-auto mt-14 max-w-5xl px-6">
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="mt-12 grid gap-10 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-12">
           {FEATURES.map((feature) => (
-            <article
-              key={feature.title}
-              className="flex flex-col overflow-hidden rounded-[1.75rem] bg-white/85 shadow-lg shadow-yearbook-accent/5 ring-1 ring-white/80"
-            >
-              <FeatureImagePlaceholder feature={feature} />
-              <div className="flex flex-1 flex-col p-5">
-                <h3 className="text-lg font-bold">{feature.title}</h3>
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-stone-600">
-                  {feature.description}
-                </p>
-              </div>
-            </article>
+            <FeatureTile key={feature.title} feature={feature} />
           ))}
         </div>
 
-        <p className="mt-10 text-center text-base font-semibold text-stone-700">
-          And more — PDF export, search signed entries, and graduation profiles.
+        <p className="mt-12 text-center text-base font-semibold text-stone-700">
+          Plus PDF export, searchable signed entries, and graduation-ready profiles.
         </p>
       </div>
+
+      <div className="mx-auto mt-14 max-w-5xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Sample yearbook</h2>
+          <p className="mt-4 text-lg leading-8 text-stone-700">
+            Create an account or sign in to start your journey on collecting memories.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-8 w-full">
+        <SampleFlipbook />
+      </div>
+
+      <div className="mx-auto mt-12 max-w-5xl px-6 text-center">
+        <button
+          className="rounded-full bg-yearbook-accent px-8 py-3.5 text-base font-semibold text-white transition hover:bg-yearbook-ink"
+          onClick={scrollToGetStarted}
+          type="button"
+        >
+          Get started
+        </button>
+      </div>
+
+      <p className="mx-auto mt-10 max-w-5xl px-6 pb-10 text-center text-xs text-stone-600">
+        Photo by{" "}
+        <a
+          className="font-medium text-yearbook-accent underline underline-offset-2 hover:text-yearbook-ink"
+          href="https://unsplash.com/@codioful?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Codioful (Formerly Gradienta)
+        </a>{" "}
+        on{" "}
+        <a
+          className="font-medium text-yearbook-accent underline underline-offset-2 hover:text-yearbook-ink"
+          href="https://unsplash.com/photos/pink-and-white-abstract-painting-KfGJzEOZXAE?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Unsplash
+        </a>
+      </p>
     </section>
   );
 }

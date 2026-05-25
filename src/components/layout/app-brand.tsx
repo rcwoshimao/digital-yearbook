@@ -5,6 +5,7 @@ type AppBrandProps = {
   className?: string;
   href?: string;
   iconSize?: number;
+  iconSrc?: string;
   titleClassName?: string;
 };
 
@@ -14,6 +15,7 @@ export function AppBrand({
   className = defaultClassName,
   href = "/dashboard",
   iconSize = 36,
+  iconSrc = "/assets/icon.png",
   titleClassName,
 }: AppBrandProps) {
   const label = (
@@ -23,7 +25,7 @@ export function AppBrand({
         className="shrink-0 rounded-md"
         height={iconSize}
         priority
-        src="/assets/icon.png"
+        src={iconSrc}
         width={iconSize}
       />
       <span className={titleClassName}>Digital Yearbook</span>
