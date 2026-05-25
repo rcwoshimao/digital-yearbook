@@ -32,6 +32,9 @@ const pageVariants: Variants = {
 };
 
 type FlipbookViewerProps = {
+  /** When false, stage allows page shadows to extend outside the book bounds. */
+  clipStage?: boolean;
+  containerClassName?: string;
   direction: FlipDirection;
   isMobile: boolean;
   spreadIndex: number;
@@ -57,6 +60,8 @@ export function useIsMobileBook() {
 }
 
 export function FlipbookViewer({
+  clipStage = true,
+  containerClassName = "mt-12",
   direction,
   isMobile,
   spreadIndex,
@@ -71,9 +76,9 @@ export function FlipbookViewer({
   }
 
   return (
-    <ResponsiveBook stageWidth={stageWidth}>
+    <ResponsiveBook containerClassName={containerClassName} stageWidth={stageWidth}>
       <div
-        className="relative overflow-hidden"
+        className={`relative ${clipStage ? "overflow-hidden" : "overflow-visible"}`}
         style={{
           height: BOOK_HEIGHT,
           width: stageWidth,
@@ -100,9 +105,11 @@ export function FlipbookViewer({
 
 function ResponsiveBook({
   children,
+  containerClassName,
   stageWidth,
 }: {
   children: ReactNode;
+  containerClassName: string;
   stageWidth: number;
 }) {
   const [scale, setScale] = useState(1);
@@ -123,7 +130,7 @@ function ResponsiveBook({
 
   return (
     <div
-      className="mx-auto mt-12"
+      className={`mx-auto ${containerClassName}`}
       style={{ height: BOOK_HEIGHT * scale, width: containerWidth }}
     >
       <div
