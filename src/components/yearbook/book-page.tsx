@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CoverDamaskOverlay } from "@/components/yearbook/cover-damask-overlay";
 import {
   fontFamilyByStyle,
   type YearbookPageStyle,
@@ -7,11 +8,18 @@ import {
 type BookPageProps = {
   children: ReactNode;
   className?: string;
+  coverDamask?: boolean;
   flat?: boolean;
   styleConfig: YearbookPageStyle;
 };
 
-export function BookPage({ children, className = "", flat = false, styleConfig }: BookPageProps) {
+export function BookPage({
+  children,
+  className = "",
+  coverDamask = false,
+  flat = false,
+  styleConfig,
+}: BookPageProps) {
   const patternClass =
     styleConfig.pattern === "none" ? "" : `yearbook-pattern-${styleConfig.pattern}`;
   const borderClass =
@@ -19,7 +27,7 @@ export function BookPage({ children, className = "", flat = false, styleConfig }
 
   return (
     <div
-      className={`relative h-full w-full overflow-hidden rounded-sm ${patternClass} ${borderClass} ${className}`}
+      className={`relative isolate h-full w-full overflow-hidden rounded-sm ${patternClass} ${borderClass} ${className}`}
       style={{
         backgroundColor: styleConfig.background_color,
         boxShadow: flat
@@ -29,6 +37,9 @@ export function BookPage({ children, className = "", flat = false, styleConfig }
         fontFamily: fontFamilyByStyle[styleConfig.font],
       }}
     >
+      {coverDamask ? (
+        <CoverDamaskOverlay backgroundColor={styleConfig.background_color} />
+      ) : null}
       {styleConfig.border === "corner" ? <CornerMarks /> : null}
       {children}
     </div>

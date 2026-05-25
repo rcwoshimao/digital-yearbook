@@ -8,7 +8,7 @@ import { EntryPageContent } from "@/components/yearbook/entry-page-content";
 import { BOOK_HEIGHT, BOOK_WIDTH } from "@/components/yearbook/flipbook-viewer";
 import { BackCoverPage, CoverPage } from "@/components/yearbook/yearbook-cover-page";
 import type { YearbookEntry } from "@/lib/types/yearbook";
-import { coverStyleConfig } from "@/lib/yearbook/cover-styles";
+import { coverStyleToPageStyle, type YearbookCoverStyle } from "@/lib/yearbook/cover-styles";
 import { normalizeYearbookPageStyle } from "@/lib/yearbook/page-style";
 import {
   appendRasterToPdf,
@@ -17,6 +17,7 @@ import {
 } from "@/lib/yearbook/pdf-export";
 
 type PdfExportButtonProps = {
+  coverStyle: YearbookCoverStyle;
   entries: YearbookEntry[];
   ownerClass?: string | null;
   ownerName: string;
@@ -26,6 +27,7 @@ type PdfExportButtonProps = {
 const exportPageStyle = { height: BOOK_HEIGHT, width: BOOK_WIDTH } as const;
 
 export function PdfExportButton({
+  coverStyle,
   entries,
   ownerClass,
   ownerName,
@@ -47,7 +49,7 @@ export function PdfExportButton({
     setIsExporting(true);
 
     try {
-      const pdf = await buildYearbookPdf(root, entries);
+      const pdf = await buildYearbookPdf(root, entries, coverStyle);
       if (!pdf) {
         notifyError("Could not export PDF. Try again in a moment.");
         return;
@@ -80,6 +82,7 @@ export function PdfExportButton({
         <div className="h-full w-full overflow-hidden" data-pdf-page="cover" style={exportPageStyle}>
           <CoverPage
             classLabel={classLabel}
+            coverStyle={coverStyle}
             flat
             ownerName={ownerName}
             ownerUniversity={ownerUniversity}
@@ -98,7 +101,7 @@ export function PdfExportButton({
           </div>
         ))}
         <div className="h-full w-full overflow-hidden" data-pdf-page="back" style={exportPageStyle}>
-          <BackCoverPage flat ownerName={ownerName} />
+          <BackCoverPage coverStyle={coverStyle} flat ownerName={ownerName} />
         </div>
       </div>
     </>
@@ -108,6 +111,7 @@ export function PdfExportButton({
 async function buildYearbookPdf(
   root: HTMLDivElement,
   entries: YearbookEntry[],
+  coverStyle: YearbookCoverStyle,
 ): Promise<jsPDF | null> {
   let pdf: jsPDF | null = null;
 
@@ -131,7 +135,8 @@ async function buildYearbookPdf(
     pdf = appendRasterToPdf(pdf, loaded);
   };
 
-  await appendDomPage('[data-pdf-page="cover"]', coverStyleConfig.background_color);
+  const coverBackground = coverStyleToPageStyle(coverStyle).background_color;
+  await appendDomPage('[data-pdf-page="cover"]', coverBackground);
 
   for (const entry of entries) {
     if (entry.pageImageUrl) {
@@ -142,7 +147,7 @@ async function buildYearbookPdf(
     await appendDomPage(`[data-pdf-page="entry-${entry.id}"]`);
   }
 
-  await appendDomPage('[data-pdf-page="back"]', coverStyleConfig.background_color);
+  await appendDomPage('[data-pdf-page="back"]', coverBackground);
 
   return pdf;
 }

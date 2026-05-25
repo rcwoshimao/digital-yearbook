@@ -16,12 +16,14 @@ import {
   type BookSpreadModel,
   type ContentSpreadLeft,
 } from "@/lib/yearbook/get-spreads";
+import type { YearbookCoverStyle } from "@/lib/yearbook/cover-styles";
 import {
   defaultYearbookPageStyle,
   normalizeYearbookPageStyle,
 } from "@/lib/yearbook/page-style";
 
 type YearbookFlipbookProps = {
+  coverStyle: YearbookCoverStyle;
   entries: YearbookEntry[];
   ownerClass?: string | null;
   ownerName: string;
@@ -34,6 +36,7 @@ type YearbookFlipbookProps = {
 type FlipDirection = "next" | "prev";
 
 export function YearbookFlipbook({
+  coverStyle,
   entries,
   ownerClass,
   ownerName,
@@ -65,17 +68,19 @@ export function YearbookFlipbook({
       isMobile
         ? buildMobileViews(spreadModels, {
             classLabel,
+            coverStyle,
             ownerName,
             ownerUniversity,
             shareUrl,
           })
         : buildSpreadViews(spreadModels, {
             classLabel,
+            coverStyle,
             ownerName,
             ownerUniversity,
             shareUrl,
           }),
-    [classLabel, isMobile, ownerName, ownerUniversity, shareUrl, spreadModels],
+    [classLabel, coverStyle, isMobile, ownerName, ownerUniversity, shareUrl, spreadModels],
   );
   const totalSpreads = spreads.length;
   const currentSpread = spreadIndex + 1;
@@ -147,6 +152,7 @@ export function YearbookFlipbook({
           isMobile={isMobile}
           spreadIndex={spreadIndex}
           spreads={spreads}
+          spreadsVersion={`${coverStyle.background_color}-${coverStyle.pattern}`}
         />
       )}
       {shouldRenderBook ? (
@@ -172,6 +178,7 @@ export function YearbookFlipbook({
 
 type SpreadViewContext = {
   classLabel: string;
+  coverStyle: YearbookCoverStyle;
   ownerName: string;
   ownerUniversity?: string | null;
   shareUrl: string;
@@ -190,6 +197,7 @@ function buildMobileViews(models: BookSpreadModel[], context: SpreadViewContext)
         <CoverPage
           key={`mobile-cover-${index}`}
           classLabel={context.classLabel}
+          coverStyle={context.coverStyle}
           ownerName={context.ownerName}
           ownerUniversity={context.ownerUniversity}
         />,
@@ -198,7 +206,13 @@ function buildMobileViews(models: BookSpreadModel[], context: SpreadViewContext)
     }
 
     if (model.kind === "back") {
-      pages.push(<BackCoverPage key={`mobile-back-${index}`} ownerName={context.ownerName} />);
+      pages.push(
+        <BackCoverPage
+          key={`mobile-back-${index}`}
+          coverStyle={context.coverStyle}
+          ownerName={context.ownerName}
+        />,
+      );
       return;
     }
 
@@ -220,6 +234,7 @@ function renderSpread(model: BookSpreadModel, context: SpreadViewContext, key: s
       <BookSpreadLayout key={key} variant="cover">
         <CoverPage
           classLabel={context.classLabel}
+          coverStyle={context.coverStyle}
           ownerName={context.ownerName}
           ownerUniversity={context.ownerUniversity}
         />
@@ -230,7 +245,7 @@ function renderSpread(model: BookSpreadModel, context: SpreadViewContext, key: s
   if (model.kind === "back") {
     return (
       <BookSpreadLayout key={key} variant="back">
-        <BackCoverPage ownerName={context.ownerName} />
+        <BackCoverPage coverStyle={context.coverStyle} ownerName={context.ownerName} />
       </BookSpreadLayout>
     );
   }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { friendlyErrorMessage } from "@/lib/errors/friendly-message";
+import { normalizeCoverStyle, type YearbookCoverStyle } from "@/lib/yearbook/cover-styles";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeUsername } from "@/lib/username";
 
@@ -32,6 +33,38 @@ async function revalidateOwnerViews(supabase: Awaited<ReturnType<typeof createCl
       revalidatePath(`/profile/${profile.username}`);
     }
   }
+}
+
+export async function updateCoverStyle(
+  yearbookId: string,
+  style: YearbookCoverStyle,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!yearbookId) {
+    return { ok: false, message: "Missing yearbook." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sign in to update your cover." };
+  }
+
+  const coverStyleConfig = normalizeCoverStyle(style);
+  const { error } = await supabase
+    .from("yearbooks")
+    .update({ cover_style_config: coverStyleConfig })
+    .eq("id", yearbookId)
+    .eq("owner_id", user.id);
+
+  if (error) {
+    return { ok: false, message: friendlyErrorMessage(error, "cover_style") };
+  }
+
+  await revalidateOwnerViews(supabase);
+  return { ok: true };
 }
 
 export async function updateShareMode(formData: FormData) {

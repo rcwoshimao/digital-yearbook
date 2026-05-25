@@ -3,6 +3,7 @@ import { messageForInvalidApiKeyError } from "@/lib/supabase/keys";
 
 export type FriendlyErrorContext =
   | "auth"
+  | "cover_style"
   | "entry_delete"
   | "entry_submit"
   | "entry_upload"
@@ -174,6 +175,8 @@ function fallbackForContext(context: FriendlyErrorContext): string {
       return "Could not revoke the invite. Please try again.";
     case "share_mode":
       return "Could not update sharing settings. Please try again.";
+    case "cover_style":
+      return "Could not save your cover style. Please try again.";
     case "profile_username":
       return "Could not update your username. Please try again.";
     case "profile_display_name":

@@ -1,3 +1,4 @@
+import type { YearbookCoverStyle } from "@/lib/yearbook/cover-styles";
 import type { YearbookPageStyle } from "@/lib/yearbook/page-style";
 
 export type Profile = {
@@ -14,6 +15,7 @@ export type Yearbook = {
   id: string;
   ownerId: string;
   shareMode: "link" | "invite_only";
+  coverStyle: YearbookCoverStyle;
   createdAt: Date;
 };
 

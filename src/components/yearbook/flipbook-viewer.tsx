@@ -36,6 +36,8 @@ type FlipbookViewerProps = {
   isMobile: boolean;
   spreadIndex: number;
   spreads: ReactNode[];
+  /** Busts motion cache when cover style changes without flipping pages. */
+  spreadsVersion?: string;
 };
 
 export function useIsMobileBook() {
@@ -54,7 +56,13 @@ export function useIsMobileBook() {
   return isMobile;
 }
 
-export function FlipbookViewer({ direction, isMobile, spreadIndex, spreads }: FlipbookViewerProps) {
+export function FlipbookViewer({
+  direction,
+  isMobile,
+  spreadIndex,
+  spreads,
+  spreadsVersion,
+}: FlipbookViewerProps) {
   const spread = spreads[spreadIndex];
   const stageWidth = isMobile ? BOOK_WIDTH : SPREAD_WIDTH;
 
@@ -73,7 +81,7 @@ export function FlipbookViewer({ direction, isMobile, spreadIndex, spreads }: Fl
       >
         <AnimatePresence custom={direction} initial={false}>
           <motion.div
-            key={spreadIndex}
+            key={`${spreadIndex}-${spreadsVersion ?? "v0"}`}
             animate="center"
             className="absolute inset-0 h-full w-full"
             custom={direction}
