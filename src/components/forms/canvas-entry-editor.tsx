@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   applyBackgroundImageToCanvas,
-  normalizeCanvasBackground,
+  refitCanvasBackgroundAfterLoad,
 } from "@/lib/canvas/background-image";
 import { clearDraft, hasDraft, loadDraftCanvas, saveDraft } from "@/lib/canvas/draft-store";
 import {
@@ -148,7 +148,7 @@ export function CanvasEntryEditor({
       isRestoringRef.current = true;
 
       await canvas.loadFromJSON(snapshot);
-      normalizeCanvasBackground(canvas, { width: PAGE_WIDTH, height: PAGE_HEIGHT });
+      refitCanvasBackgroundAfterLoad(canvas, { width: PAGE_WIDTH, height: PAGE_HEIGHT });
       fixCanvasTextFontFamilies(canvas);
       canvas.renderAll();
       historyIndexRef.current = index;
@@ -386,7 +386,7 @@ export function CanvasEntryEditor({
 
       isRestoringRef.current = true;
       await canvas.loadFromJSON(hydrated);
-      normalizeCanvasBackground(canvas, { width: PAGE_WIDTH, height: PAGE_HEIGHT });
+      refitCanvasBackgroundAfterLoad(canvas, { width: PAGE_WIDTH, height: PAGE_HEIGHT });
       fixCanvasTextFontFamilies(canvas);
       canvas.renderAll();
       pushHistory(canvas);

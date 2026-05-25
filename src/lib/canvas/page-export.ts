@@ -1,5 +1,5 @@
 import type { Canvas } from "fabric";
-import { normalizeCanvasBackground } from "@/lib/canvas/background-image";
+import { FabricImage } from "fabric";
 
 export type PageExportProfile = {
   multiplier: number;
@@ -34,17 +34,55 @@ function dataUrlToBlob(dataUrl: string): Blob {
   return new Blob([bytes], { type: mime });
 }
 
+/**
+ * Fabric's toDataURL(multiplier) scales the canvas but leaves backgroundImage at
+ * logical page size when backgroundVpt is false — a tiny strip in the top-left.
+ * Export objects without the background, then stretch-draw the bg to full export size.
+ */
 export function exportPageImage(canvas: Canvas, profile: PageExportProfile): Blob {
-  normalizeCanvasBackground(canvas, { width: canvas.width, height: canvas.height });
-  canvas.requestRenderAll();
+  const multiplier = profile.multiplier;
+  const exportWidth = canvas.width * multiplier;
+  const exportHeight = canvas.height * multiplier;
 
-  const dataUrl = canvas.toDataURL({
-    format: "jpeg",
-    quality: profile.quality,
-    multiplier: profile.multiplier,
+  const savedBackgroundImage = canvas.backgroundImage;
+  const savedBackgroundColor = canvas.backgroundColor;
+
+  canvas.set({
+    backgroundImage: undefined,
+    backgroundColor: "",
   });
 
-  return dataUrlToBlob(dataUrl);
+  const objectsLayer = canvas.toCanvasElement(multiplier);
+
+  canvas.set({
+    backgroundImage: savedBackgroundImage,
+    backgroundColor: savedBackgroundColor,
+  });
+
+  const output = document.createElement("canvas");
+  output.width = exportWidth;
+  output.height = exportHeight;
+
+  const ctx = output.getContext("2d");
+  if (!ctx) {
+    throw new Error("Could not create export canvas.");
+  }
+
+  if (typeof savedBackgroundColor === "string") {
+    ctx.fillStyle = savedBackgroundColor;
+    ctx.fillRect(0, 0, exportWidth, exportHeight);
+  }
+
+  if (savedBackgroundImage instanceof FabricImage) {
+    const element = savedBackgroundImage.getElement() as CanvasImageSource | null;
+    if (element) {
+      ctx.drawImage(element, 0, 0, exportWidth, exportHeight);
+    }
+  }
+
+  ctx.drawImage(objectsLayer, 0, 0);
+
+  return dataUrlToBlob(output.toDataURL("image/jpeg", profile.quality));
 }
 
 /** Low-res JPEG for storage; lowers quality if the file exceeds the upload cap. */
