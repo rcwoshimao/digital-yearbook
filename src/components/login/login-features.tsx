@@ -125,7 +125,7 @@ export function LoginFeatures() {
       </div>
 
       <p className="mx-auto mt-10 max-w-5xl px-6 pb-10 text-center text-xs text-stone-600">
-        Photo by{" "}
+        Background image by{" "}
         <a
           className="font-medium text-yearbook-accent underline underline-offset-2 hover:text-yearbook-ink"
           href="https://unsplash.com/@codioful?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText"

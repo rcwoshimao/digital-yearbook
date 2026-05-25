@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DevModeBanner } from "@/components/layout/dev-mode-banner";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { AppProviders } from "@/components/providers/app-providers";
 import {
   canvasFontGoogleStylesheetHref,
@@ -31,7 +32,10 @@ export default function RootLayout({
       </head>
       <body className={canvasFontVariables}>
         <DevModeBanner />
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          {children}
+          <SiteFooter />
+        </AppProviders>
       </body>
     </html>
   );
