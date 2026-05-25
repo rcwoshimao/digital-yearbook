@@ -10,11 +10,9 @@ import {
   deleteAuthorEntriesForYearbook,
   fetchAuthorEntriesForYearbook,
 } from "@/lib/yearbook/author-entry";
-import {
-  createServiceRoleClient,
-  entryMutationClient,
-  getServiceRoleKeyProblem,
-} from "@/lib/supabase/service-role";
+import { requireEntryMutationClient } from "@/lib/supabase/service-role";
+import { yearbookSubmitAccessError } from "@/lib/yearbook/submit-access";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { isNextNavigationError } from "@/lib/next/is-redirect-error";
 import { requireUser, requireUserMessage } from "@/lib/supabase/require-user";
 import { createClient } from "@/lib/supabase/server";
@@ -41,12 +39,12 @@ function errorDebugDetail(error: { code?: string; message?: string } | null): st
 }
 
 async function uploadEntryPageImage(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  client: SupabaseClient,
   objectPath: string,
   bytes: Buffer,
   contentType: string,
 ) {
-  const storage = entryMutationClient(supabase).storage.from("entry-pdfs");
+  const storage = client.storage.from("entry-pdfs");
   await storage.remove([objectPath]);
 
   const { error: uploadError } = await storage.upload(objectPath, bytes, {
@@ -58,7 +56,7 @@ async function uploadEntryPageImage(
 }
 
 async function replaceExistingEntryPage(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  client: SupabaseClient,
   entryId: string,
   authorId: string,
   pageImageObjectPath: string,
@@ -68,7 +66,7 @@ async function replaceExistingEntryPage(
     graduation_class: string | null;
   },
 ) {
-  return entryMutationClient(supabase)
+  return client
     .from("entries")
     .update({
       page_image_url: pageImageObjectPath,
@@ -94,7 +92,7 @@ function isPostgresDuplicate(error: { code?: string; message?: string } | null):
 }
 
 async function insertCanvasEntryRow(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  client: SupabaseClient,
   authorId: string,
   row: {
     id: string;
@@ -110,7 +108,7 @@ async function insertCanvasEntryRow(
     throw new Error("Entry author mismatch.");
   }
 
-  return entryMutationClient(supabase).from("entries").insert({
+  return client.from("entries").insert({
     id: row.id,
     yearbook_id: row.yearbook_id,
     author_id: row.author_id,
@@ -172,7 +170,18 @@ async function runSubmitCanvasEntry(formData: FormData): Promise<string | null> 
   }
 
   const user = auth.user;
-  const db = entryMutationClient(supabase);
+
+  const mutation = requireEntryMutationClient();
+  if (!mutation.ok) {
+    return mutation.message;
+  }
+
+  const db = mutation.client;
+
+  const accessError = await yearbookSubmitAccessError(db, yearbookId, user.id);
+  if (accessError) {
+    return accessError;
+  }
 
   const { data: profile, error: profileError } = await db
     .from("profiles")
@@ -210,7 +219,7 @@ async function runSubmitCanvasEntry(formData: FormData): Promise<string | null> 
   // Replace-in-place: upload first, then update the row (never delete storage before this).
   if (existingRows.length === 1) {
     const uploadError = await uploadEntryPageImage(
-      supabase,
+      db,
       pageImageObjectPath,
       pageImageBytes,
       pageImageContentType,
@@ -224,7 +233,7 @@ async function runSubmitCanvasEntry(formData: FormData): Promise<string | null> 
     }
 
     const { error: updateError } = await replaceExistingEntryPage(
-      supabase,
+      db,
       existingRows[0].id,
       user.id,
       pageImageObjectPath,
@@ -239,7 +248,7 @@ async function runSubmitCanvasEntry(formData: FormData): Promise<string | null> 
   // Full replace or new sign: remove old rows/storage first, then upload once, then insert.
   if (existingRows.length > 0) {
     try {
-      await deleteAuthorEntriesForYearbook(supabase, yearbookId, user.id);
+      await deleteAuthorEntriesForYearbook(db, yearbookId, user.id);
     } catch (deleteError: unknown) {
       const detail =
         deleteError instanceof Error ? deleteError.message : String(deleteError);
@@ -254,7 +263,7 @@ async function runSubmitCanvasEntry(formData: FormData): Promise<string | null> 
   }
 
   const uploadError = await uploadEntryPageImage(
-    supabase,
+    db,
     pageImageObjectPath,
     pageImageBytes,
     pageImageContentType,
@@ -267,12 +276,6 @@ async function runSubmitCanvasEntry(formData: FormData): Promise<string | null> 
       : message;
   }
 
-  const serviceRoleProblem = getServiceRoleKeyProblem();
-  if (serviceRoleProblem) {
-    return serviceRoleProblem;
-  }
-
-  const serviceClient = createServiceRoleClient();
   const entryId = randomUUID();
   const entryRow = {
     id: entryId,
@@ -284,11 +287,11 @@ async function runSubmitCanvasEntry(formData: FormData): Promise<string | null> 
     page_image_url: pageImageObjectPath,
   };
 
-  let { error: insertError } = await insertCanvasEntryRow(supabase, user.id, entryRow);
+  let { error: insertError } = await insertCanvasEntryRow(db, user.id, entryRow);
 
-  if (insertError && isPostgresDuplicate(insertError) && serviceClient) {
-    await deleteAuthorEntriesForYearbook(serviceClient, yearbookId, user.id);
-    const retry = await insertCanvasEntryRow(supabase, user.id, {
+  if (insertError && isPostgresDuplicate(insertError)) {
+    await deleteAuthorEntriesForYearbook(db, yearbookId, user.id);
+    const retry = await insertCanvasEntryRow(db, user.id, {
       ...entryRow,
       id: randomUUID(),
     });
@@ -296,10 +299,10 @@ async function runSubmitCanvasEntry(formData: FormData): Promise<string | null> 
   }
 
   if (insertError) {
-    await entryMutationClient(supabase).storage.from("entry-pdfs").remove([pageImageObjectPath]);
+    await db.storage.from("entry-pdfs").remove([pageImageObjectPath]);
 
-    if (isPostgresDuplicate(insertError) && serviceClient) {
-      const { data: yearbookEntries } = await serviceClient
+    if (isPostgresDuplicate(insertError)) {
+      const { data: yearbookEntries } = await db
         .from("entries")
         .select("author_id")
         .eq("yearbook_id", yearbookId);
@@ -364,8 +367,13 @@ export async function deleteMyYearbookEntry(formData: FormData) {
   const supabase = await createClient();
   const user = await requireUser(supabase, { writeOwnerUsername: ownerUsername });
 
+  const mutation = requireEntryMutationClient();
+  if (!mutation.ok) {
+    redirect(writeErrorUrl(ownerUsername, mutation.message));
+  }
+
   try {
-    await deleteAuthorEntriesForYearbook(supabase, yearbookId, user.id);
+    await deleteAuthorEntriesForYearbook(mutation.client, yearbookId, user.id);
   } catch (error: unknown) {
     redirect(
       writeErrorUrl(

@@ -43,3 +43,30 @@ export function createServiceRoleClient(): SupabaseClient | null {
 export function entryMutationClient(userClient: SupabaseClient): SupabaseClient {
   return createServiceRoleClient() ?? userClient;
 }
+
+/**
+ * Entry writes must use the service role so RLS does not depend on auth.uid() in
+ * server actions (often null on Cloudflare even when getUser() succeeds).
+ */
+export function requireEntryMutationClient():
+  | { ok: true; client: SupabaseClient }
+  | { ok: false; message: string } {
+  const problem = getServiceRoleKeyProblem();
+
+  if (problem) {
+    return { ok: false, message: problem };
+  }
+
+  const client = createServiceRoleClient();
+
+  if (!client) {
+    return {
+      ok: false,
+      message:
+        getServiceRoleKeyProblem() ??
+        "SUPABASE_SERVICE_ROLE_KEY is not available on the server. Add it in Cloudflare → Settings → Variables (Production), then redeploy.",
+    };
+  }
+
+  return { ok: true, client };
+}
