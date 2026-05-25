@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Canvas, FabricImage, IText, Textbox, type FabricObject } from "fabric";
 import { submitCanvasEntry } from "@/app/yearbook/[yearbookId]/write/actions";
+import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -572,6 +573,15 @@ export function CanvasEntryEditor({
     setIsSubmitting(true);
 
     try {
+      const supabase = createClient();
+      const { error: refreshError } = await supabase.auth.refreshSession();
+
+      if (refreshError) {
+        notifyError("Your session expired. Sign out, sign in again, then try signing.");
+        setIsSubmitting(false);
+        return;
+      }
+
       const pageImageBlob = exportPageImageForSubmit(canvas);
       const formData = new FormData();
       formData.set("yearbookId", yearbookId);

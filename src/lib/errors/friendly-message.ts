@@ -237,8 +237,8 @@ export function friendlyErrorMessage(
     }
   }
 
-  if (/JWT expired|refresh token|session/i.test(text)) {
-    return "Your session expired. Please sign in again.";
+  if (/jws|jwt|protected header|bad_jwt|invalid token|refresh token|session/i.test(text)) {
+    return "Your session expired or was interrupted. Sign out, sign in again, then try again.";
   }
 
   if (/network|fetch failed|timeout/i.test(text)) {

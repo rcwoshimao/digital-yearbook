@@ -222,11 +222,11 @@ Set in **Pages → Settings → Environment variables** for **Production** (and 
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | `https://<ref>.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon (public) key |
 | `NEXT_PUBLIC_APP_URL` | Yes | Canonical site URL, e.g. `https://yearbook.yourdomain.com` — used in server redirects and email redirects |
-| `SUPABASE_SERVICE_ROLE_KEY` | No* | Only if you add server admin tools; **not** used by `src/` today |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Server-side sign/delete/upload; avoids JWT cookie issues on mobile and Cloudflare |
 | `NEXT_PUBLIC_DEV_FEATURES` | **Must be unset** on production | Enables dev UI on preview/staging deploys only |
 | `NEXT_PUBLIC_DEV_EMAIL_AUTH` | **Must be unset** on production | Legacy alias for `NEXT_PUBLIC_DEV_FEATURES` |
 
-\* `scripts/seed-dev-users.mjs` uses the service role locally only.
+Also used locally by `scripts/seed-dev-users.mjs`. Without it on Workers, signing may fail with session/JWS errors after large uploads.
 
 After changing env vars, **redeploy** — `NEXT_PUBLIC_*` values are inlined at build time.
 

@@ -11,6 +11,7 @@ import {
   fetchAuthorEntriesForYearbook,
 } from "@/lib/yearbook/author-entry";
 import { createServiceRoleClient, entryMutationClient } from "@/lib/supabase/service-role";
+import { requireUser } from "@/lib/supabase/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeUsername } from "@/lib/username";
 
@@ -86,6 +87,7 @@ function isPostgresDuplicate(error: { code?: string; message?: string } | null):
 
 async function insertCanvasEntryRow(
   supabase: Awaited<ReturnType<typeof createClient>>,
+  authorId: string,
   row: {
     id: string;
     yearbook_id: string;
@@ -96,7 +98,11 @@ async function insertCanvasEntryRow(
     page_image_url: string;
   },
 ) {
-  return supabase.from("entries").insert({
+  if (row.author_id !== authorId) {
+    throw new Error("Entry author mismatch.");
+  }
+
+  return entryMutationClient(supabase).from("entries").insert({
     id: row.id,
     yearbook_id: row.yearbook_id,
     author_id: row.author_id,
@@ -132,13 +138,8 @@ export async function submitCanvasEntry(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireUser(supabase, { writeOwnerUsername: ownerUsername });
+  const db = entryMutationClient(supabase);
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -160,7 +161,7 @@ export async function submitCanvasEntry(formData: FormData) {
   let existingRows: Awaited<ReturnType<typeof fetchAuthorEntriesForYearbook>> = [];
 
   try {
-    existingRows = await fetchAuthorEntriesForYearbook(supabase, yearbookId, user.id);
+    existingRows = await fetchAuthorEntriesForYearbook(db, yearbookId, user.id);
   } catch (fetchError: unknown) {
     redirect(
       writeErrorUrl(
@@ -219,7 +220,7 @@ export async function submitCanvasEntry(formData: FormData) {
       redirect(writeErrorUrl(ownerUsername, friendlyErrorMessage(detail, "entry_delete")));
     }
 
-    const stillThere = await fetchAuthorEntriesForYearbook(supabase, yearbookId, user.id);
+    const stillThere = await fetchAuthorEntriesForYearbook(db, yearbookId, user.id);
     if (stillThere.length > 0) {
       redirect(
         writeErrorUrl(
@@ -259,11 +260,14 @@ export async function submitCanvasEntry(formData: FormData) {
     page_image_url: pageImageObjectPath,
   };
 
-  let { error: insertError } = await insertCanvasEntryRow(supabase, entryRow);
+  let { error: insertError } = await insertCanvasEntryRow(supabase, user.id, entryRow);
 
   if (insertError && isPostgresDuplicate(insertError) && serviceClient) {
     await deleteAuthorEntriesForYearbook(serviceClient, yearbookId, user.id);
-    const retry = await insertCanvasEntryRow(supabase, { ...entryRow, id: randomUUID() });
+    const retry = await insertCanvasEntryRow(supabase, user.id, {
+      ...entryRow,
+      id: randomUUID(),
+    });
     insertError = retry.error;
   }
 
@@ -315,13 +319,7 @@ export async function deleteMyYearbookEntry(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireUser(supabase, { writeOwnerUsername: ownerUsername });
 
   try {
     await deleteAuthorEntriesForYearbook(supabase, yearbookId, user.id);

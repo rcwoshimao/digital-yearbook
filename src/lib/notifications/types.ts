@@ -35,10 +35,18 @@ const LEGACY_ENTRY_ERROR_MESSAGES: Record<string, string> = {
     "Could not save your page. Delete your signature if you have one, then try again.",
   "Could not save your entry because a conflicting record exists. Try Remove my signature, or delete the row in Supabase → entries for this yearbook.":
     "Could not save your page. Delete your signature if you have one, then try again.",
+  "JWS Protected Header is invalid":
+    "Your session expired or was interrupted. Sign out, sign in again, then try signing.",
 };
 
 function sanitizeErrorParam(raw: string, context: FriendlyErrorContext): string {
-  const legacy = LEGACY_ENTRY_ERROR_MESSAGES[raw.trim()];
+  const trimmed = raw.trim();
+  const legacy =
+    LEGACY_ENTRY_ERROR_MESSAGES[trimmed] ??
+    Object.entries(LEGACY_ENTRY_ERROR_MESSAGES).find(
+      ([key]) => key.toLowerCase() === trimmed.toLowerCase(),
+    )?.[1];
+
   if (legacy) {
     return legacy;
   }
