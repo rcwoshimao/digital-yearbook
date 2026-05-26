@@ -1,10 +1,5 @@
 import Link from "next/link";
-
-const LINKS = [
-  { label: "Website", href: "https://rcwoshimaodev.vercel.app/" },
-  { label: "GitHub", href: "https://github.com/rcwoshimao" },
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/jiaying-chen01/" },
-] as const;
+import { CREATOR_LINKS } from "@/components/layout/creator-social-links";
 
 export function SiteFooter() {
   return (
@@ -19,7 +14,7 @@ export function SiteFooter() {
           aria-label="Creator links"
           className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1"
         >
-          {LINKS.map((link) => (
+          {CREATOR_LINKS.map((link) => (
             <Link
               key={link.href}
               className="font-medium text-yearbook-accent underline-offset-2 hover:text-yearbook-ink hover:underline"

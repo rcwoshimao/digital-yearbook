@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { AuthForm } from "@/components/forms/auth-form";
 import { AppBrand } from "@/components/layout/app-brand";
+import { CreatorSocialIconLinks } from "@/components/layout/creator-social-links";
 import { SampleMarquee } from "@/components/login/sample-marquee";
 
 type LoginHeroProps = {
@@ -26,10 +27,12 @@ function scrollToFeatures(event: React.MouseEvent<HTMLAnchorElement>) {
 export function LoginHero({ isConfigured }: LoginHeroProps) {
   return (
     <section className="relative min-h-screen px-6 py-10 sm:py-12" id="get-started">
+      <CreatorSocialIconLinks className="absolute right-6 top-6 z-20 sm:right-10 sm:top-10" />
+
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl flex-col justify-center gap-10 lg:flex-row lg:items-center lg:gap-12">
         <div className="w-full shrink-0 lg:max-w-md lg:flex-1">
           <AppBrand
-            className="inline-flex items-center gap-5 text-3xl font-black tracking-tight sm:text-4xl"
+            className="inline-flex items-center gap-8 text-3xl font-black tracking-tight sm:text-4xl"
             href="/"
             iconSize={100}
             iconSrc="/assets/icon_big.png"

@@ -1,16 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { SampleFlipbook } from "@/components/login/sample-flipbook";
-
-const DEMO_WIDTH = 1920;
-const DEMO_HEIGHT = 1080;
 
 type Feature = {
   title: string;
   description: string;
-  imageSrc: string;
-  imageAlt: string;
+  videoSrc: string;
+  videoAlt: string;
 };
 
 const FEATURES: Feature[] = [
@@ -18,29 +14,29 @@ const FEATURES: Feature[] = [
     title: "Share modes you control",
     description:
       "Toggle between invite-only and anyone-with-link sharing. Tighten access when you want only close friends, or open the book when you want signing to feel effortless.",
-    imageSrc: "/assets/demos/sharemodes.gif",
-    imageAlt: "Switching between two yearbook share modes",
+    videoSrc: "/assets/demos/sharemodes.mp4",
+    videoAlt: "Switching between two yearbook share modes",
   },
   {
     title: "Freewrite on a signing canvas",
     description:
       "Open a page-sized canvas and write by hand—like signing a tablet in the hallway. Personal strokes and notes feel closer to a real yearbook than typed text alone.",
-    imageSrc: "/assets/demos/freewrite.gif",
-    imageAlt: "Freehand drawing and writing on a yearbook page",
+    videoSrc: "/assets/demos/freewrite.mp4",
+    videoAlt: "Freehand drawing and writing on a yearbook page",
   },
   {
     title: "Backgrounds that match your style",
     description:
       "Set the mood with custom background images and colors on each page. Graduation palettes, photos, or clean tones—your book looks like yours, not a template.",
-    imageSrc: "/assets/demos/background.gif",
-    imageAlt: "Changing page background image and color",
+    videoSrc: "/assets/demos/background.mp4",
+    videoAlt: "Changing page background image and color",
   },
   {
     title: "Text, photos, and stickers",
     description:
       "Layer messages, images, and stickers anywhere on the page. Mix typography and visuals so every signature carries the inside jokes and memories you want to keep.",
-    imageSrc: "/assets/demos/text_image_sticker.gif",
-    imageAlt: "Adding text, photos, and stickers to a yearbook page",
+    videoSrc: "/assets/demos/text_image_sticker.mp4",
+    videoAlt: "Adding text, photos, and stickers to a yearbook page",
   },
 ];
 
@@ -61,14 +57,15 @@ function scrollToGetStarted(event: React.MouseEvent<HTMLButtonElement>) {
 function FeatureTile({ feature }: { feature: Feature }) {
   return (
     <article className="flex flex-col gap-4">
-      <Image
-        alt={feature.imageAlt}
+      <video
+        aria-label={feature.videoAlt}
+        autoPlay
         className="h-auto w-full"
-        height={DEMO_HEIGHT}
-        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 576px"
-        src={feature.imageSrc}
-        unoptimized
-        width={DEMO_WIDTH}
+        loop
+        muted
+        playsInline
+        preload="metadata"
+        src={feature.videoSrc}
       />
       <div>
         <h3 className="text-lg font-bold tracking-tight text-yearbook-ink">{feature.title}</h3>
