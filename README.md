@@ -1,3 +1,6 @@
+[Link to Digital Yearbook app](https://digital-yearbook.rebeccachencjy.workers.dev/login)
+
+
 # Digital Yearbook
 
 A full-stack graduation yearbook where graduates collect signed pages from friends, browse them in an interactive flipbook, and export the whole book as a PDF. Friends sign yearbooks on a desktop canvas editor with text, photos, stickers, and freehand drawing.
