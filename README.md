@@ -1,4 +1,6 @@
-[![✨ View Digital Yearbook →](https://img.shields.io/badge/✨_View-Digital_Yearbook-6366f1?style=for-the-badge)](https://digital-yearbook.rebeccachencjy.workers.dev/login)
+<div align="center">
+  <h2><a href="https://digital-yearbook.rebeccachencjy.workers.dev/login">✨ Try the Digital Yearbook Live ✨</a></h2>
+</div>
 
 # Digital Yearbook
 
