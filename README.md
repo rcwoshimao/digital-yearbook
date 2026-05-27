@@ -1,5 +1,13 @@
 <div align="center">
-  <h2><a href="https://digital-yearbook.rebeccachencjy.workers.dev/login">✨ Try the Digital Yearbook Live ✨</a></h2>
+  <a href="https://digital-yearbook.rebeccachencjy.workers.dev/login">
+    <img src="https://img.shields.io/badge/🎓%20Open%20Digital%20Yearbook-%20✨%20Live%20Demo%20✨-ff69b4?style=for-the-badge&logoColor=white" alt="Digital Yearbook" />
+  </a>
+  <h1>
+    <a href="https://digital-yearbook.rebeccachencjy.workers.dev/login">
+      ✨ Digital Yearbook ✨
+    </a>
+  </h1>
+  <p><i>🎓 Click above to open the live app 🎓</i></p>
 </div>
 
 # Digital Yearbook
